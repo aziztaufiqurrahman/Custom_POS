@@ -1,0 +1,16 @@
+#!/bin/sh
+# Gerbang kualitas sebelum commit: typecheck + lint + test.
+# Jika salah satu gagal, commit dibatalkan.
+# Diaktifkan via: git config core.hooksPath .githooks
+set -e
+
+echo "[pre-commit] 1/3 typecheck (tsc --noEmit)..."
+npm run --silent typecheck
+
+echo "[pre-commit] 2/3 lint (eslint)..."
+npm run --silent lint
+
+echo "[pre-commit] 3/3 test (vitest)..."
+npm run --silent test
+
+echo "[pre-commit] OK — semua pemeriksaan lolos."

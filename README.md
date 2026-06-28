@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Aplikasi POS / Kasir — 8am Business
 
-## Getting Started
+Sistem Point of Sale berbasis web: transaksi penjualan, manajemen produk & stok,
+pembayaran (Cash/QRIS/Transfer), rekonsiliasi kas per shift, rekap penjualan, dan
+dashboard pendapatan.
 
-First, run the development server:
+Spesifikasi lengkap: lihat [`PRD-POS-Kasir.md`](./PRD-POS-Kasir.md).
+Panduan kerja untuk Claude Code: lihat [`CLAUDE.md`](./CLAUDE.md).
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Tech Stack
+Next.js 15 (App Router) · TypeScript · Tailwind CSS v4 · shadcn/ui ·
+Supabase (Postgres + Auth + Storage + RLS) · TanStack Query · Recharts · Vitest · Vercel.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Persiapan
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **Buat project Supabase** (gunakan instance staging untuk pengembangan).
+2. Salin environment:
+   ```bash
+   cp .env.example .env.local
+   ```
+   Isi `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, dan
+   `SUPABASE_SERVICE_ROLE_KEY` (rahasia, hanya server).
+3. Install dependensi & jalankan:
+   ```bash
+   npm install
+   npm run dev
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Perintah
+| Perintah | Fungsi |
+|---|---|
+| `npm run dev` | Dev server |
+| `npm run build` | Build production |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint` | ESLint |
+| `npm run test` | Vitest |
 
-## Learn More
+## MCP (opsional, untuk Claude Code)
+Konfigurasi ada di `.mcp.json` (Context7 + Supabase). Sebelum dipakai:
+- Ganti `YOUR_PROJECT_REF` dengan project ref Supabase Anda.
+- Set environment variable `SUPABASE_ACCESS_TOKEN` (Personal Access Token Supabase) —
+  JANGAN tulis token langsung di file yang di-commit.
+- Di Windows, bila MCP gagal start, jalankan Claude Code dan biarkan ia memverifikasi
+  perintah `npx` (kadang perlu `cmd /c npx`).
 
-To learn more about Next.js, take a look at the following resources:
+## Menetapkan Admin Pertama (manual via DB)
+Tidak ada UI untuk "promosi diri menjadi admin" (sesuai PRD §2.1). Admin pertama
+ditetapkan langsung di database:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Daftarkan user lewat halaman login (atau Supabase Auth → Add user).
+2. Buka **Supabase → SQL Editor**, jalankan (ganti email sesuai akun Anda):
+   ```sql
+   update public.profiles
+   set role = 'admin', is_active = true
+   where id = (select id from auth.users where email = 'admin@contoh.com');
+   ```
+3. Setelah jadi admin, kelola karyawan & hak akses lain lewat halaman **/employees**.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+> Catatan: tabel `profiles` & trigger pembuatannya dibuat pada Tahap 1 (skema DB).
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Mengisi Rekening Bank & QRIS
+Lewat halaman **/settings** (admin):
+- **Rekening bank** (BNI/BCA/BSI): nomor rekening + nama pemilik.
+- **QRIS**: upload gambar QRIS statis (disimpan di Supabase Storage).
+- **Profil toko**, **pajak (PPN)**, **kategori**, dan **format nomor transaksi**.
