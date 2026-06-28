@@ -37,19 +37,25 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isAuthRoute = pathname.startsWith("/login");
-  const isPublicAsset =
-    pathname.startsWith("/_next") || pathname === "/favicon.ico";
 
-  // Belum login & bukan halaman login → arahkan ke /login.
-  if (!user && !isAuthRoute && !isPublicAsset) {
+  // Path yang boleh diakses tanpa login.
+  const publicPrefixes = ["/login", "/forgot-password", "/reset-password", "/auth"];
+  const isPublic =
+    publicPrefixes.some((p) => pathname === p || pathname.startsWith(p + "/")) ||
+    pathname.startsWith("/_next") ||
+    pathname === "/favicon.ico";
+
+  // Belum login & bukan halaman publik → arahkan ke /login.
+  if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  // Sudah login tapi membuka /login → arahkan ke beranda.
-  if (user && isAuthRoute) {
+  // Sudah login tapi membuka /login atau /forgot-password → arahkan ke beranda.
+  // (/reset-password & /auth/callback sengaja TIDAK dialihkan karena dipakai
+  //  saat sesi pemulihan kata sandi aktif.)
+  if (user && (pathname === "/login" || pathname === "/forgot-password")) {
     const url = request.nextUrl.clone();
     url.pathname = "/pos";
     return NextResponse.redirect(url);
