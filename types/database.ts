@@ -744,6 +744,14 @@ export type Database = {
       }
     }
     Functions: {
+      adjust_stock: {
+        Args: { p_new_qty: number; p_note?: string; p_product_id: string }
+        Returns: Json
+      }
+      complete_opname: {
+        Args: { p_items: Json; p_opname_id: string }
+        Returns: Json
+      }
       create_sale: {
         Args: {
           p_cash_session_id: string
@@ -758,6 +766,15 @@ export type Database = {
       }
       has_permission: { Args: { perm: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
+      restock_product: {
+        Args: {
+          p_new_cost?: number
+          p_note?: string
+          p_product_id: string
+          p_qty: number
+        }
+        Returns: Json
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       void_sale: {
