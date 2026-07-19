@@ -764,6 +764,11 @@ export type Database = {
         }
         Returns: Json
       }
+      dashboard_analytics: {
+        Args: { p_bucket?: string; p_from: string; p_to: string }
+        Returns: Json
+      }
+      dashboard_kpis: { Args: never; Returns: Json }
       has_permission: { Args: { perm: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       restock_product: {
