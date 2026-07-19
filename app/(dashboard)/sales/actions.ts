@@ -110,3 +110,26 @@ export async function voidSaleAction(
   revalidatePath("/products");
   return { success: true };
 }
+
+export async function refundSaleAction(
+  id: string,
+  reason: string,
+): Promise<{ error?: string; success?: boolean }> {
+  const { profile } = await getSession();
+  if (!profile) return { error: "Tidak terautentikasi" };
+  if (!can(profile, "transaction.refund")) {
+    return { error: "Tidak berwenang melakukan refund" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("refund_sale", {
+    p_transaction_id: id,
+    p_reason: reason || undefined,
+  });
+  if (error) return { error: error.message.replace(/^.*?:\s*/, "") };
+
+  revalidatePath("/sales");
+  revalidatePath("/shifts");
+  revalidatePath("/products");
+  return { success: true };
+}

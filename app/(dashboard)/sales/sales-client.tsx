@@ -4,9 +4,14 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Ban, Download, Eye, Printer, Search } from "lucide-react";
+import { Ban, Download, Eye, Printer, Search, Undo2 } from "lucide-react";
 
-import { getSaleDetail, voidSaleAction, type SaleDetail } from "./actions";
+import {
+  getSaleDetail,
+  refundSaleAction,
+  voidSaleAction,
+  type SaleDetail,
+} from "./actions";
 import type { SaleRow, SalesFilters } from "./page";
 import { PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { formatNumber, formatRupiah } from "@/lib/format";
@@ -67,6 +72,7 @@ export function SalesClient({
   filters,
   isAdmin,
   canVoid,
+  canRefund,
   cashiers,
   shifts,
 }: {
@@ -74,13 +80,14 @@ export function SalesClient({
   filters: SalesFilters;
   isAdmin: boolean;
   canVoid: boolean;
+  canRefund: boolean;
   cashiers: { id: string; full_name: string }[];
   shifts: { id: string; opened_at: string; cashier_name: string }[];
 }) {
   const router = useRouter();
   const [f, setF] = useState<SalesFilters>(filters);
   const [detailId, setDetailId] = useState<string | null>(null);
-  const [voidTarget, setVoidTarget] = useState<SaleRow | null>(null);
+  const [action, setAction] = useState<{ row: SaleRow; kind: "void" | "refund" } | null>(null);
 
   useEffect(() => setF(filters), [filters]);
 
@@ -330,20 +337,22 @@ export function SalesClient({
         <DetailDialog
           id={detailId}
           canVoid={canVoid}
+          canRefund={canRefund}
           onClose={() => setDetailId(null)}
-          onVoid={(row) => {
+          onAction={(row, kind) => {
             setDetailId(null);
-            setVoidTarget(row);
+            setAction({ row, kind });
           }}
         />
       )}
 
-      {voidTarget && (
-        <VoidDialog
-          row={voidTarget}
-          onOpenChange={(o) => !o && setVoidTarget(null)}
+      {action && (
+        <ActionDialog
+          row={action.row}
+          kind={action.kind}
+          onOpenChange={(o) => !o && setAction(null)}
           onDone={() => {
-            setVoidTarget(null);
+            setAction(null);
             router.refresh();
           }}
         />
@@ -355,13 +364,15 @@ export function SalesClient({
 function DetailDialog({
   id,
   canVoid,
+  canRefund,
   onClose,
-  onVoid,
+  onAction,
 }: {
   id: string;
   canVoid: boolean;
+  canRefund: boolean;
   onClose: () => void;
-  onVoid: (row: SaleRow) => void;
+  onAction: (row: SaleRow, kind: "void" | "refund") => void;
 }) {
   const [detail, setDetail] = useState<SaleDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -452,18 +463,29 @@ function DetailDialog({
               </Link>
             }
           />
-          {canVoid && detail?.status === "completed" && (
-            <Button
-              variant="destructive"
-              onClick={() =>
-                onVoid({
-                  id: detail.id,
-                  code: detail.code,
-                } as SaleRow)
-              }
-            >
-              <Ban className="size-4" /> Void
-            </Button>
+          {detail?.status === "completed" && (
+            <div className="flex gap-2">
+              {canRefund && (
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    onAction({ id: detail.id, code: detail.code } as SaleRow, "refund")
+                  }
+                >
+                  <Undo2 className="size-4" /> Refund
+                </Button>
+              )}
+              {canVoid && (
+                <Button
+                  variant="destructive"
+                  onClick={() =>
+                    onAction({ id: detail.id, code: detail.code } as SaleRow, "void")
+                  }
+                >
+                  <Ban className="size-4" /> Void
+                </Button>
+              )}
+            </div>
           )}
         </DialogFooter>
       </DialogContent>
@@ -471,26 +493,33 @@ function DetailDialog({
   );
 }
 
-function VoidDialog({
+function ActionDialog({
   row,
+  kind,
   onOpenChange,
   onDone,
 }: {
   row: SaleRow;
+  kind: "void" | "refund";
   onOpenChange: (o: boolean) => void;
   onDone: () => void;
 }) {
   const [reason, setReason] = useState("");
   const [pending, start] = useTransition();
+  const isVoid = kind === "void";
 
   function submit() {
     start(async () => {
-      const res = await voidSaleAction(row.id, reason);
+      const res = isVoid
+        ? await voidSaleAction(row.id, reason)
+        : await refundSaleAction(row.id, reason);
       if (res.error) {
         toast.error(res.error);
         return;
       }
-      toast.success("Transaksi di-void, stok dikembalikan");
+      toast.success(
+        isVoid ? "Transaksi di-void, stok dikembalikan" : "Transaksi di-refund, stok dikembalikan",
+      );
       onDone();
     });
   }
@@ -499,9 +528,12 @@ function VoidDialog({
     <Dialog open onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Void transaksi {row.code}?</DialogTitle>
+          <DialogTitle>
+            {isVoid ? "Void" : "Refund"} transaksi {row.code}?
+          </DialogTitle>
           <DialogDescription>
-            Stok akan dikembalikan dan transaksi ditandai void. Tindakan ini tercatat.
+            Stok akan dikembalikan dan transaksi ditandai {isVoid ? "void" : "refunded"}.
+            Tindakan ini tercatat di audit.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-2">
@@ -518,7 +550,7 @@ function VoidDialog({
             Batal
           </Button>
           <Button variant="destructive" onClick={submit} disabled={pending}>
-            {pending ? "Memproses…" : "Ya, Void"}
+            {pending ? "Memproses…" : isVoid ? "Ya, Void" : "Ya, Refund"}
           </Button>
         </DialogFooter>
       </DialogContent>

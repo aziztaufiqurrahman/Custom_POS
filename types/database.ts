@@ -771,6 +771,10 @@ export type Database = {
       dashboard_kpis: { Args: never; Returns: Json }
       has_permission: { Args: { perm: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
+      refund_sale: {
+        Args: { p_reason?: string; p_transaction_id: string }
+        Returns: Json
+      }
       restock_product: {
         Args: {
           p_new_cost?: number

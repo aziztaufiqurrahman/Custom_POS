@@ -128,6 +128,7 @@ export default async function SalesPage({
       filters={filters}
       isAdmin={admin}
       canVoid={can(profile, "transaction.void")}
+      canRefund={can(profile, "transaction.refund")}
       cashiers={cashiers ?? []}
       shifts={shiftOptions}
     />
