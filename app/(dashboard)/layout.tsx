@@ -12,7 +12,7 @@ export default async function DashboardLayout({
 
   return (
     <AuthProvider profile={profile}>
-      <div className="flex min-h-svh bg-muted/30">
+      <div className="flex min-h-svh bg-background">
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar />

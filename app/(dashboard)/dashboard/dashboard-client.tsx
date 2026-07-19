@@ -53,11 +53,11 @@ import {
 
 // Palet kategorikal urutan tetap (biru/amber/teal) — divalidasi CVD.
 const METHOD_META = [
-  { key: "cash", label: "Tunai", color: "#3b82f6" },
-  { key: "qris", label: "QRIS", color: "#f59e0b" },
-  { key: "transfer", label: "Transfer", color: "#14b8a6" },
+  { key: "cash", label: "Tunai", color: "#4f46e5" },
+  { key: "qris", label: "QRIS", color: "#10b981" },
+  { key: "transfer", label: "Transfer", color: "#f59e0b" },
 ] as const;
-const PRIMARY = "#3b82f6";
+const PRIMARY = "#4f46e5";
 
 function compactIdr(v: number): string {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}jt`;

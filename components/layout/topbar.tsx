@@ -3,7 +3,7 @@
 import { useTransition } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, Menu } from "lucide-react";
+import { Bell, LogOut, Menu } from "lucide-react";
 
 import { signOut } from "@/app/(dashboard)/actions";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -48,7 +48,7 @@ export function Topbar() {
   }
 
   return (
-    <header className="flex h-14 items-center justify-between gap-3 border-b bg-background px-4">
+    <header className="flex h-16 items-center justify-between gap-3 border-b bg-card px-4 md:px-6">
       <div className="flex items-center gap-2">
         {/* Menu mobile */}
         <DropdownMenu>
@@ -82,15 +82,22 @@ export function Topbar() {
             })}
           </DropdownMenuContent>
         </DropdownMenu>
-        <h1 className="text-sm font-semibold sm:text-base">
-          {current?.label ?? "POS Kasir"}
+        <h1 className="font-heading text-lg font-bold text-primary sm:text-xl">
+          {current?.label ?? "KasirPintar"}
         </h1>
       </div>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={<Button variant="ghost" className="gap-2 px-2" />}
-        >
+      <div className="flex items-center gap-1">
+        <Button variant="ghost" size="icon" className="relative">
+          <Bell className="size-5" />
+          <span className="absolute top-2 right-2.5 size-1.5 rounded-full bg-destructive" />
+          <span className="sr-only">Notifikasi</span>
+        </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<Button variant="ghost" className="gap-2 px-2" />}
+          >
           <Avatar className="size-7">
             <AvatarFallback className="text-xs">
               {initials(profile?.full_name ?? "?")}
@@ -115,7 +122,8 @@ export function Topbar() {
             {pending ? "Keluar…" : "Keluar"}
           </DropdownMenuItem>
         </DropdownMenuContent>
-      </DropdownMenu>
+        </DropdownMenu>
+      </div>
     </header>
   );
 }
