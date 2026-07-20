@@ -68,7 +68,15 @@ export function Sidebar() {
         <button
           type="button"
           disabled={pending}
-          onClick={() => startTransition(async () => await signOut())}
+          onClick={() =>
+            startTransition(async () => {
+              try {
+                await signOut();
+              } finally {
+                window.location.href = "/login";
+              }
+            })
+          }
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-white/5 hover:text-white"
         >
           <LogOut className="size-5" />

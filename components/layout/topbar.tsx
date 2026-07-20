@@ -14,7 +14,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -43,7 +42,13 @@ export function Topbar() {
 
   function handleSignOut() {
     startTransition(async () => {
-      await signOut();
+      try {
+        await signOut();
+      } finally {
+        // Navigasi penuh setelah cookie sesi dibersihkan (hindari race saat
+        // menu menutup / komponen unmount).
+        window.location.href = "/login";
+      }
     });
   }
 
@@ -53,9 +58,7 @@ export function Topbar() {
         {/* Menu mobile */}
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={
-              <Button variant="ghost" size="icon" className="md:hidden" />
-            }
+            render={<Button variant="ghost" size="icon" className="md:hidden" />}
           >
             <Menu className="size-5" />
             <span className="sr-only">Menu</span>
@@ -88,40 +91,50 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="size-5" />
-          <span className="absolute top-2 right-2.5 size-1.5 rounded-full bg-destructive" />
-          <span className="sr-only">Notifikasi</span>
-        </Button>
+        {/* Notifikasi */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<Button variant="ghost" size="icon" className="relative" />}
+          >
+            <Bell className="size-5" />
+            <span className="sr-only">Notifikasi</span>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+            <div className="px-2 py-1.5 text-sm font-medium">Notifikasi</div>
+            <DropdownMenuSeparator />
+            <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+              Belum ada notifikasi.
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
+        {/* Akun */}
         <DropdownMenu>
           <DropdownMenuTrigger
             render={<Button variant="ghost" className="gap-2 px-2" />}
           >
-          <Avatar className="size-7">
-            <AvatarFallback className="text-xs">
-              {initials(profile?.full_name ?? "?")}
-            </AvatarFallback>
-          </Avatar>
-          <span className="hidden text-sm sm:inline">
-            {profile?.full_name}
-          </span>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>
-            <div className="flex flex-col">
-              <span>{profile?.full_name}</span>
-              <span className="text-xs font-normal text-muted-foreground capitalize">
+            <Avatar className="size-7">
+              <AvatarFallback className="text-xs">
+                {initials(profile?.full_name ?? "?")}
+              </AvatarFallback>
+            </Avatar>
+            <span className="hidden text-sm sm:inline">
+              {profile?.full_name}
+            </span>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <div className="flex flex-col px-2 py-1.5">
+              <span className="text-sm font-medium">{profile?.full_name}</span>
+              <span className="text-xs text-muted-foreground capitalize">
                 {profile?.role}
               </span>
             </div>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleSignOut} disabled={pending}>
-            <LogOut className="size-4" />
-            {pending ? "Keluar…" : "Keluar"}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleSignOut} disabled={pending}>
+              <LogOut className="size-4" />
+              {pending ? "Keluar…" : "Keluar"}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
         </DropdownMenu>
       </div>
     </header>
