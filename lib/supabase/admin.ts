@@ -3,6 +3,7 @@ import "server-only";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/types/database";
+import { getServiceRoleKey, SUPABASE_URL } from "./env";
 
 /**
  * Supabase ADMIN client (service role) — MELEWATI RLS.
@@ -12,14 +13,12 @@ import type { Database } from "@/types/database";
  * Pakai hanya untuk operasi admin terkontrol (mis. membuat akun karyawan).
  */
 export function createAdminClient() {
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceRoleKey = getServiceRoleKey();
   if (!serviceRoleKey) {
     throw new Error("SUPABASE_SERVICE_ROLE_KEY belum diset di environment server.");
   }
 
-  return createSupabaseClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    serviceRoleKey,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
+  return createSupabaseClient<Database>(SUPABASE_URL, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
 }
