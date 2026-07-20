@@ -16,7 +16,7 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "KasirPintar — POS",
+  title: "Pudingkuu Lucky — POS",
   description: "Aplikasi kasir: transaksi, stok, pembayaran, dan laporan penjualan.",
 };
 

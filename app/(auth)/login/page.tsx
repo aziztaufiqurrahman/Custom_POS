@@ -24,7 +24,7 @@ export default async function LoginPage({
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-xl">POS Kasir</CardTitle>
+        <CardTitle className="text-xl">Pudingkuu Lucky</CardTitle>
         <CardDescription>Masuk untuk mulai bertransaksi</CardDescription>
       </CardHeader>
       <CardContent>

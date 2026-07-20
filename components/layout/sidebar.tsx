@@ -54,7 +54,7 @@ export function Sidebar() {
         </div>
         <div className="leading-tight">
           <p className="font-heading text-base font-extrabold text-white">
-            KasirPintar
+            Pudingkuu Lucky
           </p>
           <p className="text-[11px] text-sidebar-foreground/70">Admin Panel</p>
         </div>

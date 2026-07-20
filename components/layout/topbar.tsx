@@ -83,7 +83,7 @@ export function Topbar() {
           </DropdownMenuContent>
         </DropdownMenu>
         <h1 className="font-heading text-lg font-bold text-primary sm:text-xl">
-          {current?.label ?? "KasirPintar"}
+          {current?.label ?? "Pudingkuu Lucky"}
         </h1>
       </div>
 

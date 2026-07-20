@@ -49,39 +49,39 @@
 }
 
 :root {
-  /* Modern Retail OS — KasirPintar */
-  --background: #f5f6fa;
-  --foreground: #131b2e;
-  --card: #ffffff;
-  --card-foreground: #131b2e;
-  --popover: #ffffff;
-  --popover-foreground: #131b2e;
-  --primary: #4f46e5;
+  /* Pudingkuu Lucky — tone krem & cokelat muda */
+  --background: #f7f1e6;
+  --foreground: #3a2c1d;
+  --card: #fffdf8;
+  --card-foreground: #3a2c1d;
+  --popover: #fffdf8;
+  --popover-foreground: #3a2c1d;
+  --primary: #9c6a44;
   --primary-foreground: #ffffff;
-  --secondary: #eaedff;
-  --secondary-foreground: #3f3d66;
-  --muted: #eef0f6;
-  --muted-foreground: #5b5b6b;
-  --accent: #eaedff;
-  --accent-foreground: #3525cd;
-  --destructive: #ba1a1a;
-  --border: #e6e9ef;
-  --input: #e6e9ef;
-  --ring: #4f46e5;
-  --chart-1: #4f46e5;
-  --chart-2: #10b981;
-  --chart-3: #f59e0b;
-  --chart-4: #7c3aed;
-  --chart-5: #0ea5e9;
+  --secondary: #efe3d2;
+  --secondary-foreground: #6b4f36;
+  --muted: #f0e8db;
+  --muted-foreground: #8a7660;
+  --accent: #efe3d2;
+  --accent-foreground: #7a5734;
+  --destructive: #b3261e;
+  --border: #e7dcc9;
+  --input: #e7dcc9;
+  --ring: #9c6a44;
+  --chart-1: #9c6a44;
+  --chart-2: #7a9b5e;
+  --chart-3: #d99a55;
+  --chart-4: #b5835a;
+  --chart-5: #c2704a;
   --radius: 0.625rem;
-  --sidebar: #1e1b4b;
-  --sidebar-foreground: #c7c4d8;
-  --sidebar-primary: #4f46e5;
+  --sidebar: #3a2b20;
+  --sidebar-foreground: #d8c7b3;
+  --sidebar-primary: #c98a5a;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #2a2660;
+  --sidebar-accent: #4c3a2b;
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-ring: #4f46e5;
+  --sidebar-ring: #c98a5a;
 }
 
 .dark {
