@@ -313,9 +313,11 @@ function FieldError({ msg }: { msg?: string }) {
 export function EmployeesClient({
   employees,
   currentUserId,
+  serviceRoleMissing = false,
 }: {
   employees: EmployeeRow[];
   currentUserId: string;
+  serviceRoleMissing?: boolean;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState<EmployeeRow | null>(null);
@@ -346,6 +348,14 @@ export function EmployeesClient({
 
   return (
     <div className="space-y-4">
+      {serviceRoleMissing && (
+        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
+          Konfigurasi server belum lengkap: <b>SUPABASE_SERVICE_ROLE_KEY</b> belum
+          di-set di Vercel. Email karyawan tidak tampil dan fitur{" "}
+          <b>Tambah Karyawan</b> dinonaktifkan. Edit peran/izin, aktif/nonaktif, dan
+          reset password tetap berfungsi.
+        </div>
+      )}
       <Card>
         <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
           <div>
@@ -354,7 +364,13 @@ export function EmployeesClient({
               Kelola akun, peran, dan hak akses karyawan.
             </CardDescription>
           </div>
-          <AddEmployeeDialog onDone={refresh} />
+          {serviceRoleMissing ? (
+            <Button disabled>
+              <Plus className="size-4" /> Tambah Karyawan
+            </Button>
+          ) : (
+            <AddEmployeeDialog onDone={refresh} />
+          )}
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">

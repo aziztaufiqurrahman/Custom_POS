@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getServiceRoleKey } from "@/lib/supabase/env";
 import { logAudit } from "@/lib/audit";
 import {
   createProductPayloadSchema,
@@ -77,7 +78,9 @@ export async function createProduct(
 
   // Catat stok awal (stock_movements 'initial'). RLS stock_movements = admin;
   // gunakan admin client (aksi sudah diverifikasi izinnya di atas).
-  if (d.initial_stock > 0) {
+  // Catatan stok awal butuh service role (RLS movements = admin). Best-effort:
+  // bila belum dikonfigurasi, produk & stok tetap tersimpan, hanya log dilewati.
+  if (d.initial_stock > 0 && getServiceRoleKey() !== "") {
     const admin = createAdminClient();
     await admin.from("stock_movements").insert({
       product_id: inserted.id,

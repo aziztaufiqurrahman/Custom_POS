@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { getServiceRoleKey } from "@/lib/supabase/env";
 import { logAudit } from "@/lib/audit";
 import {
   createEmployeeSchema,
@@ -23,6 +24,13 @@ export async function createEmployee(
     return { error: parsed.error.issues[0]?.message ?? "Input tidak valid" };
   }
   const data = parsed.data;
+
+  if (getServiceRoleKey() === "") {
+    return {
+      error:
+        "Server belum dikonfigurasi (SUPABASE_SERVICE_ROLE_KEY). Set di Vercel lalu redeploy.",
+    };
+  }
 
   const admin = createAdminClient();
   const { data: created, error } = await admin.auth.admin.createUser({
@@ -85,8 +93,9 @@ export async function updateEmployee(
     return { error: "Tidak bisa mengubah peran akun Anda sendiri" };
   }
 
-  const admin = createAdminClient();
-  const { error } = await admin
+  // Pakai client biasa (admin ditegakkan via RLS) — tidak butuh service role.
+  const supabase = await createClient();
+  const { error } = await supabase
     .from("profiles")
     .update({
       full_name: data.full_name,
@@ -119,8 +128,9 @@ export async function setEmployeeActive(
     return { error: "Tidak bisa menonaktifkan akun Anda sendiri" };
   }
 
-  const admin = createAdminClient();
-  const { error } = await admin
+  // Pakai client biasa (admin ditegakkan via RLS) — tidak butuh service role.
+  const supabase = await createClient();
+  const { error } = await supabase
     .from("profiles")
     .update({ is_active: isActive })
     .eq("id", id);
