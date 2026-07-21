@@ -3,7 +3,7 @@ import { isAdmin as isAdminFn } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import type { PaymentBreakdown } from "@/lib/shift";
 
-import { getSessionBreakdown } from "./queries";
+import { getSessionBreakdown, getSessionExpenses, type SessionExpenses } from "./queries";
 import { ShiftsClient } from "./shifts-client";
 
 export type ActiveShift = {
@@ -26,6 +26,7 @@ export type ShiftHistoryItem = {
   total_transfer: number;
   total_gofood: number;
   total_shopeefood: number;
+  total_expenses: number;
 };
 
 export default async function ShiftsPage() {
@@ -42,6 +43,10 @@ export default async function ShiftsPage() {
 
   const activeBreakdown: PaymentBreakdown | null = active
     ? await getSessionBreakdown(supabase, active.id)
+    : null;
+
+  const activeExpenses: SessionExpenses | null = active
+    ? await getSessionExpenses(supabase, active.id)
     : null;
 
   let historyQuery = supabase
@@ -72,6 +77,7 @@ export default async function ShiftsPage() {
       total_transfer: h.total_transfer,
       total_gofood: h.total_gofood,
       total_shopeefood: h.total_shopeefood,
+      total_expenses: h.total_expenses ?? 0,
     };
   });
 
@@ -79,6 +85,7 @@ export default async function ShiftsPage() {
     <ShiftsClient
       active={active ?? null}
       activeBreakdown={activeBreakdown}
+      activeExpenses={activeExpenses}
       history={historyItems}
       isAdmin={admin}
     />

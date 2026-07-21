@@ -28,6 +28,7 @@ export function ReceiptDialog({
   onClose: () => void;
 }) {
   const { receipt, items, totals, payment } = sale;
+  const grandWithShipping = totals.grandTotal + sale.shipping;
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -40,7 +41,7 @@ export function ReceiptDialog({
 
         <div className="space-y-2 text-sm">
           <div className="text-center">
-            <p className="font-semibold">{storeName}</p>
+            <p className="whitespace-pre-line font-semibold">{storeName}</p>
             <p className="text-xs text-muted-foreground">{receipt.code}</p>
             <p className="text-xs text-muted-foreground">
               {formatTanggalWaktu(sale.createdAt)} · {cashierName}
@@ -70,21 +71,19 @@ export function ReceiptDialog({
             {totals.taxTotal > 0 && (
               <Line label="Pajak" value={formatRupiah(totals.taxTotal)} />
             )}
+            {sale.shipping > 0 && (
+              <Line label="Ongkos kirim" value={formatRupiah(sale.shipping)} />
+            )}
             <div className="flex justify-between border-t pt-1 font-bold">
               <span>Total</span>
-              <span>{formatRupiah(totals.grandTotal)}</span>
+              <span>{formatRupiah(grandWithShipping)}</span>
             </div>
             <Line
               label={`Bayar (${PAYMENT_METHOD_LABELS[payment.method]}${payment.bank ? " " + payment.bank : ""})`}
-              value={formatRupiah(
-                payment.cashReceived ?? totals.grandTotal,
-              )}
+              value={formatRupiah(payment.cashReceived ?? grandWithShipping)}
             />
             {payment.method === "cash" && (
               <Line label="Kembalian" value={formatRupiah(receipt.change_given)} />
-            )}
-            {sale.shipping > 0 && (
-              <Line label="Ongkos kirim" value={formatRupiah(sale.shipping)} />
             )}
           </div>
         </div>

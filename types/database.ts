@@ -85,6 +85,51 @@ export type Database = {
         }
         Relationships: []
       }
+      cash_expenses: {
+        Row: {
+          amount: number
+          cash_session_id: string
+          category: string
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+        }
+        Insert: {
+          amount: number
+          cash_session_id: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+        }
+        Update: {
+          amount?: number
+          cash_session_id?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_expenses_cash_session_id_fkey"
+            columns: ["cash_session_id"]
+            isOneToOne: false
+            referencedRelation: "cash_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_expenses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cash_sessions: {
         Row: {
           cashier_id: string
@@ -98,6 +143,7 @@ export type Database = {
           opening_balance: number
           status: Database["public"]["Enums"]["session_status"]
           total_cash: number
+          total_expenses: number
           total_gofood: number
           total_qris: number
           total_shopeefood: number
@@ -117,6 +163,7 @@ export type Database = {
           opening_balance?: number
           status?: Database["public"]["Enums"]["session_status"]
           total_cash?: number
+          total_expenses?: number
           total_gofood?: number
           total_qris?: number
           total_shopeefood?: number
@@ -136,6 +183,7 @@ export type Database = {
           opening_balance?: number
           status?: Database["public"]["Enums"]["session_status"]
           total_cash?: number
+          total_expenses?: number
           total_gofood?: number
           total_qris?: number
           total_shopeefood?: number

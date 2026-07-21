@@ -446,16 +446,13 @@ function DetailDialog({
                 <Row label="Diskon" value={`- ${formatRupiah(detail.discount_total)}`} />
               )}
               {detail.tax_total > 0 && <Row label="Pajak" value={formatRupiah(detail.tax_total)} />}
+              {detail.shipping_cost > 0 && (
+                <Row label="Ongkos kirim" value={formatRupiah(detail.shipping_cost)} />
+              )}
               <div className="flex justify-between border-t pt-1 font-bold">
                 <span>Total</span>
                 <span>{formatRupiah(detail.grand_total)}</span>
               </div>
-              {detail.shipping_cost > 0 && (
-                <Row
-                  label="Ongkos kirim (di luar pendapatan)"
-                  value={formatRupiah(detail.shipping_cost)}
-                />
-              )}
             </div>
 
             <div className="rounded-md border p-2">

@@ -42,20 +42,22 @@ export function grandTotal(b: {
 }
 
 export type Reconciliation = {
-  expectedCash: number; // uang awal + total penjualan cash
+  expectedCash: number; // uang awal + penjualan cash - pengeluaran kas
   variance: number; // dihitung - expected (lebih:+ / kurang:-)
 };
 
 /**
- * expected_cash = opening_balance + total penjualan CASH
+ * expected_cash = opening_balance + total penjualan CASH - total pengeluaran (kas keluar)
  * variance      = counted_cash - expected_cash
  */
 export function computeReconciliation(input: {
   openingBalance: number;
   totalCash: number;
   countedCash: number;
+  totalExpenses?: number;
 }): Reconciliation {
-  const expectedCash = round2(input.openingBalance + input.totalCash);
+  const expenses = input.totalExpenses ?? 0;
+  const expectedCash = round2(input.openingBalance + input.totalCash - expenses);
   const variance = round2(input.countedCash - expectedCash);
   return { expectedCash, variance };
 }

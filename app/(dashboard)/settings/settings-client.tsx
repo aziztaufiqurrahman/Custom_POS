@@ -96,11 +96,16 @@ function ProfileCard({ store }: { store: StoreSettingsData }) {
         </div>
         <div className="grid gap-2">
           <Label htmlFor="sn">Nama toko *</Label>
-          <Input
+          <Textarea
             id="sn"
+            rows={2}
             value={form.store_name}
             onChange={(e) => setForm({ ...form, store_name: e.target.value })}
+            placeholder={"Pudingkuu Lucky\nPudingna Urang Bandung"}
           />
+          <p className="text-xs text-muted-foreground">
+            Boleh beberapa baris (tekan Enter). Semua baris tampil di struk.
+          </p>
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="grid gap-2">
@@ -132,12 +137,16 @@ function ProfileCard({ store }: { store: StoreSettingsData }) {
         </div>
         <div className="grid gap-2">
           <Label htmlFor="ft">Footer struk</Label>
-          <Input
+          <Textarea
             id="ft"
+            rows={2}
             value={form.receipt_footer}
             onChange={(e) => setForm({ ...form, receipt_footer: e.target.value })}
-            placeholder="Terima kasih telah berbelanja!"
+            placeholder={"Terima kasih telah berbelanja!\nTersedia di GoFood & ShopeeFood"}
           />
+          <p className="text-xs text-muted-foreground">
+            Boleh beberapa baris (tekan Enter).
+          </p>
         </div>
         <Button onClick={submit} disabled={pending}>
           {pending ? "Menyimpan…" : "Simpan Profil"}

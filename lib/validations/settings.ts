@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 export const storeProfileSchema = z.object({
-  store_name: z.string().trim().min(1, "Nama toko wajib diisi").max(120),
+  store_name: z.string().trim().min(1, "Nama toko wajib diisi").max(200),
   address: z.string().max(300),
   phone: z.string().max(30),
-  receipt_footer: z.string().max(200),
+  receipt_footer: z.string().max(300),
   trx_prefix: z
     .string()
     .trim()

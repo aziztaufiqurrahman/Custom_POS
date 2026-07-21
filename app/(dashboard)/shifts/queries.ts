@@ -44,3 +44,29 @@ export async function getSessionBreakdown(
   }
   return result;
 }
+
+export type ExpenseItem = {
+  id: string;
+  amount: number;
+  category: string;
+  note: string | null;
+  created_at: string;
+};
+
+export type SessionExpenses = { total: number; items: ExpenseItem[] };
+
+/** Daftar & total pengeluaran (kas keluar) satu shift. Tunduk RLS. */
+export async function getSessionExpenses(
+  supabase: Client,
+  sessionId: string,
+): Promise<SessionExpenses> {
+  const { data } = await supabase
+    .from("cash_expenses")
+    .select("id, amount, category, note, created_at")
+    .eq("cash_session_id", sessionId)
+    .order("created_at", { ascending: false });
+
+  const items = (data ?? []) as ExpenseItem[];
+  const total = items.reduce((s, e) => s + e.amount, 0);
+  return { total, items };
+}

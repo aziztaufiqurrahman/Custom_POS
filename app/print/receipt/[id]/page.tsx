@@ -59,8 +59,12 @@ export default async function ReceiptPrintPage({
       <AutoPrint />
 
       <div className="text-center">
-        <p className="text-sm font-bold">{settings?.store_name ?? "Toko"}</p>
-        {settings?.address && <p className="text-[11px]">{settings.address}</p>}
+        <p className="whitespace-pre-line text-sm font-bold">
+          {settings?.store_name ?? "Toko"}
+        </p>
+        {settings?.address && (
+          <p className="whitespace-pre-line text-[11px]">{settings.address}</p>
+        )}
         {settings?.phone && <p className="text-[11px]">{settings.phone}</p>}
       </div>
 
@@ -92,10 +96,10 @@ export default async function ReceiptPrintPage({
           <Line label="Diskon" value={`-${formatRupiah(trx.discount_total)}`} />
         )}
         {trx.tax_total > 0 && <Line label="Pajak" value={formatRupiah(trx.tax_total)} />}
-        <Line label="TOTAL" value={formatRupiah(trx.grand_total)} strong />
         {trx.shipping_cost > 0 && (
           <Line label="Ongkos kirim" value={formatRupiah(trx.shipping_cost)} />
         )}
+        <Line label="TOTAL" value={formatRupiah(trx.grand_total)} strong />
       </div>
 
       <div className="mt-1 border-t border-dashed pt-1">
@@ -113,7 +117,7 @@ export default async function ReceiptPrintPage({
         ))}
       </div>
 
-      <p className="mt-3 text-center text-[11px]">
+      <p className="mt-3 whitespace-pre-line text-center text-[11px]">
         {settings?.receipt_footer ?? "Terima kasih"}
       </p>
     </div>

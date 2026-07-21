@@ -17,6 +17,7 @@ export type DashAnalytics = {
   items_sold: number;
   gross_profit: number;
   shipping_total: number;
+  expenses_total: number;
   by_method: Record<string, number>;
   by_bank: Record<string, number>;
   trend: { bucket: string; revenue: number; tx_count: number }[];

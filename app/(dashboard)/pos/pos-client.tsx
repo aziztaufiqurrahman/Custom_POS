@@ -457,16 +457,13 @@ export function PosClient({
                   value={formatRupiah(totals.taxTotal)}
                 />
               )}
+              {shipping > 0 && (
+                <Summary label="Ongkos kirim" value={formatRupiah(shipping)} />
+              )}
               <div className="flex items-center justify-between pt-1 text-base font-bold">
                 <span>Total</span>
-                <span>{formatRupiah(totals.grandTotal)}</span>
+                <span>{formatRupiah(totals.grandTotal + shipping)}</span>
               </div>
-              {shipping > 0 && (
-                <p className="pt-0.5 text-[11px] text-muted-foreground">
-                  + Ongkos kirim {formatRupiah(shipping)} (dicatat terpisah, tidak
-                  masuk pendapatan)
-                </p>
-              )}
             </div>
 
             <div className="flex gap-2">

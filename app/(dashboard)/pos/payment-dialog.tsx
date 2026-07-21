@@ -62,7 +62,7 @@ export function PaymentDialog({
   const [qrisUrl, setQrisUrl] = useState(settings.qris_image_url);
   const [pending, start] = useTransition();
 
-  const total = totals.grandTotal;
+  const total = totals.grandTotal + shipping;
   const receivedNum = received;
   const change = Math.max(0, receivedNum - total);
   const selectedBank = banks.find((b) => b.bank === bank) ?? null;

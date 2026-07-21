@@ -179,16 +179,34 @@ export function DashboardClient({
         </CardContent>
       </Card>
 
-      {/* Ringkasan rentang terpilih */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <Kpi label="Pendapatan (rentang)" value={formatRupiah(analytics.revenue)} />
+      {/* Ringkasan keuangan rentang terpilih */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+        <Kpi
+          label="Pendapatan (rentang)"
+          value={formatRupiah(analytics.revenue)}
+          sub="termasuk ongkos kirim"
+        />
+        <Kpi
+          label="Total Pengeluaran"
+          value={formatRupiah(analytics.expenses_total)}
+          sub="kas keluar (shift)"
+        />
+        <Kpi
+          label="Pendapatan Bersih"
+          value={formatRupiah(analytics.revenue - analytics.expenses_total)}
+          sub="pendapatan − pengeluaran"
+        />
+      </div>
+
+      {/* Ringkasan operasional rentang terpilih */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Transaksi" value={formatNumber(analytics.tx_count)} />
         <Kpi label="Item Terjual" value={formatNumber(analytics.items_sold)} />
         <Kpi label="Laba Kotor (rentang)" value={formatRupiah(analytics.gross_profit)} />
         <Kpi
           label="Total Ongkos Kirim"
           value={formatRupiah(analytics.shipping_total)}
-          sub="di luar pendapatan"
+          sub="sudah masuk pendapatan"
         />
       </div>
 

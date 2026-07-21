@@ -4,23 +4,39 @@ import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Clock, Download, Printer, Wallet } from "lucide-react";
+import { Clock, Download, Printer, Plus, Trash2, Wallet } from "lucide-react";
 
-import { closeShift, getShiftBreakdown, openShift } from "./actions";
+import {
+  addExpense,
+  closeShift,
+  deleteExpense,
+  getShiftBreakdown,
+  openShift,
+} from "./actions";
 import type { ActiveShift, ShiftHistoryItem } from "./page";
+import type { SessionExpenses } from "./queries";
 import {
   computeReconciliation,
   grandTotal,
   type PaymentBreakdown,
 } from "@/lib/shift";
+import { EXPENSE_CATEGORIES } from "@/lib/validations/shift";
 import { formatRupiah } from "@/lib/format";
 import { formatTanggalWaktu } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { RupiahInput } from "@/components/ui/rupiah-input";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -59,6 +75,167 @@ function VarianceBadge({ variance }: { variance: number }) {
   if (variance > 0)
     return <Badge variant="secondary">Lebih {formatRupiah(variance)}</Badge>;
   return <Badge variant="destructive">Kurang {formatRupiah(-variance)}</Badge>;
+}
+
+const EXPENSE_CATEGORY_LABELS: Record<string, string> = {
+  ongkir: "Ongkos kirim",
+  operasional: "Operasional",
+  bahan: "Bahan",
+  lainnya: "Lainnya",
+};
+
+function ExpenseDialog({ onDone }: { onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [amount, setAmount] = useState(0);
+  const [category, setCategory] = useState<string>("ongkir");
+  const [note, setNote] = useState("");
+  const [pending, start] = useTransition();
+
+  function submit() {
+    start(async () => {
+      const res = await addExpense({ amount, category, note });
+      if (res.error) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success("Pengeluaran dicatat");
+      setAmount(0);
+      setCategory("ongkir");
+      setNote("");
+      setOpen(false);
+      onDone();
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+        <Plus className="size-4" /> Catat Pengeluaran
+      </Button>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Catat Pengeluaran Kas</DialogTitle>
+          <DialogDescription>
+            Uang keluar dari laci kas (mis. bayar ongkos kirim/kurir). Mengurangi
+            kas seharusnya saat tutup shift.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="grid gap-2">
+            <Label htmlFor="exp-amount">Nominal (Rp)</Label>
+            <RupiahInput
+              id="exp-amount"
+              value={amount}
+              onValueChange={setAmount}
+              placeholder="0"
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label>Kategori</Label>
+            <Select value={category} onValueChange={(v) => setCategory(v ?? "lainnya")}>
+              <SelectTrigger>
+                <SelectValue>
+                  {(val: string | null) =>
+                    EXPENSE_CATEGORY_LABELS[val ?? "lainnya"] ?? "Lainnya"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {EXPENSE_CATEGORIES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {EXPENSE_CATEGORY_LABELS[c]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="exp-note">Catatan (opsional)</Label>
+            <Input
+              id="exp-note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="mis. ongkir GoSend pesanan #123"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>
+            Batal
+          </Button>
+          <Button onClick={submit} disabled={pending || amount <= 0}>
+            {pending ? "Menyimpan…" : "Simpan"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ExpensesCard({
+  expenses,
+  onChanged,
+}: {
+  expenses: SessionExpenses;
+  onChanged: () => void;
+}) {
+  const [pending, start] = useTransition();
+
+  function remove(id: string) {
+    start(async () => {
+      const res = await deleteExpense(id);
+      if (res.error) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success("Pengeluaran dihapus");
+      onChanged();
+    });
+  }
+
+  return (
+    <div className="rounded-md border p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-sm font-medium">Pengeluaran (kas keluar)</span>
+        <ExpenseDialog onDone={onChanged} />
+      </div>
+      {expenses.items.length === 0 ? (
+        <p className="py-2 text-center text-xs text-muted-foreground">
+          Belum ada pengeluaran pada shift ini.
+        </p>
+      ) : (
+        <ul className="divide-y">
+          {expenses.items.map((e) => (
+            <li key={e.id} className="flex items-center justify-between gap-2 py-1.5 text-sm">
+              <div className="min-w-0">
+                <p className="truncate">
+                  {EXPENSE_CATEGORY_LABELS[e.category] ?? e.category}
+                  {e.note ? <span className="text-muted-foreground"> · {e.note}</span> : null}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="whitespace-nowrap font-medium">
+                  {formatRupiah(e.amount)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => remove(e.id)}
+                  disabled={pending}
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="mt-1 flex items-center justify-between border-t pt-2 text-sm font-semibold">
+        <span>Total pengeluaran</span>
+        <span>{formatRupiah(expenses.total)}</span>
+      </div>
+    </div>
+  );
 }
 
 function OpenShiftCard({ onDone }: { onDone: () => void }) {
@@ -109,11 +286,13 @@ function OpenShiftCard({ onDone }: { onDone: () => void }) {
 function CloseShiftDialog({
   opening,
   totalCash,
+  totalExpenses,
   breakdown,
   onClosed,
 }: {
   opening: number;
   totalCash: number;
+  totalExpenses: number;
   breakdown: PaymentBreakdown;
   onClosed: () => void;
 }) {
@@ -125,6 +304,7 @@ function CloseShiftDialog({
   const recon = computeReconciliation({
     openingBalance: opening,
     totalCash,
+    totalExpenses,
     countedCash: counted,
   });
 
@@ -169,6 +349,9 @@ function CloseShiftDialog({
           <div className="rounded-md border p-3">
             <Row label="Uang awal" value={formatRupiah(opening)} />
             <Row label="+ Penjualan tunai" value={formatRupiah(totalCash)} />
+            {totalExpenses > 0 && (
+              <Row label="− Pengeluaran kas" value={formatRupiah(totalExpenses)} />
+            )}
             <Row label="= Kas seharusnya" value={formatRupiah(recon.expectedCash)} strong />
             <Row label="Hitungan fisik" value={formatRupiah(counted)} />
             <div className="mt-1 flex items-center justify-between border-t pt-2 text-sm">
@@ -217,12 +400,15 @@ function CloseShiftDialog({
 function ActiveShiftCard({
   active,
   breakdown,
+  expenses,
   onClosed,
 }: {
   active: ActiveShift;
   breakdown: PaymentBreakdown;
+  expenses: SessionExpenses;
   onClosed: () => void;
 }) {
+  const expectedCash = active.opening_balance + breakdown.cash - expenses.total;
   return (
     <Card>
       <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
@@ -237,18 +423,22 @@ function ActiveShiftCard({
         <CloseShiftDialog
           opening={active.opening_balance}
           totalCash={breakdown.cash}
+          totalExpenses={expenses.total}
           breakdown={breakdown}
           onClosed={onClosed}
         />
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="rounded-md border p-3">
             <Row label="Uang awal" value={formatRupiah(active.opening_balance)} />
             <Row label="Penjualan tunai" value={formatRupiah(breakdown.cash)} />
+            {expenses.total > 0 && (
+              <Row label="− Pengeluaran kas" value={formatRupiah(expenses.total)} />
+            )}
             <Row
               label="Kas seharusnya"
-              value={formatRupiah(active.opening_balance + breakdown.cash)}
+              value={formatRupiah(expectedCash)}
               strong
             />
           </div>
@@ -265,6 +455,7 @@ function ActiveShiftCard({
             />
           </div>
         </div>
+        <ExpensesCard expenses={expenses} onChanged={onClosed} />
       </CardContent>
     </Card>
   );
@@ -308,6 +499,9 @@ function DetailDialog({
         <div className="space-y-3">
           <div className="rounded-md border p-3">
             <Row label="Uang awal" value={formatRupiah(item.opening_balance)} />
+            {item.total_expenses > 0 && (
+              <Row label="Pengeluaran kas" value={formatRupiah(item.total_expenses)} />
+            )}
             <Row label="Kas seharusnya" value={formatRupiah(item.expected_cash ?? 0)} />
             <Row label="Hitungan fisik" value={formatRupiah(item.counted_cash ?? 0)} />
             <div className="mt-1 flex items-center justify-between border-t pt-2 text-sm">
@@ -374,6 +568,7 @@ function exportCsv(history: ShiftHistoryItem[]) {
     "Transfer",
     "GoFood",
     "ShopeeFood",
+    "Pengeluaran",
     "Total Transaksi",
   ];
   const rows = history.map((h) => [
@@ -389,6 +584,7 @@ function exportCsv(history: ShiftHistoryItem[]) {
     h.total_transfer,
     h.total_gofood,
     h.total_shopeefood,
+    h.total_expenses,
     h.total_cash +
       h.total_qris +
       h.total_transfer +
@@ -410,11 +606,13 @@ function exportCsv(history: ShiftHistoryItem[]) {
 export function ShiftsClient({
   active,
   activeBreakdown,
+  activeExpenses,
   history,
   isAdmin,
 }: {
   active: ActiveShift | null;
   activeBreakdown: PaymentBreakdown | null;
+  activeExpenses: SessionExpenses | null;
   history: ShiftHistoryItem[];
   isAdmin: boolean;
 }) {
@@ -431,6 +629,7 @@ export function ShiftsClient({
         <ActiveShiftCard
           active={active}
           breakdown={activeBreakdown}
+          expenses={activeExpenses ?? { total: 0, items: [] }}
           onClosed={refresh}
         />
       ) : (

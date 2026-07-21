@@ -58,7 +58,7 @@ export default async function ShiftPrintPage({
     <div className="mx-auto max-w-sm p-6 text-foreground">
       <AutoPrint />
       <div className="mb-3 text-center">
-        <h1 className="text-lg font-semibold">
+        <h1 className="whitespace-pre-line text-lg font-semibold">
           {settings?.store_name ?? "Toko"}
         </h1>
         <p className="text-sm text-muted-foreground">Ringkasan Shift Kasir</p>
@@ -76,9 +76,14 @@ export default async function ShiftPrintPage({
       <div className="border-b py-2">
         <Line label="Uang awal" value={formatRupiah(s.opening_balance)} />
         <Line label="Penjualan tunai" value={formatRupiah(b.cash)} />
+        {(s.total_expenses ?? 0) > 0 && (
+          <Line label="Pengeluaran kas" value={formatRupiah(s.total_expenses)} />
+        )}
         <Line
           label="Kas seharusnya"
-          value={formatRupiah(s.expected_cash ?? s.opening_balance + b.cash)}
+          value={formatRupiah(
+            s.expected_cash ?? s.opening_balance + b.cash - (s.total_expenses ?? 0),
+          )}
           strong
         />
         <Line label="Hitungan fisik" value={formatRupiah(s.counted_cash ?? 0)} />
