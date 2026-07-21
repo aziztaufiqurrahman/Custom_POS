@@ -21,6 +21,7 @@ import {
   type PaymentBreakdown,
 } from "@/lib/shift";
 import { EXPENSE_CATEGORIES } from "@/lib/validations/shift";
+import { DownloadInvoiceButton } from "@/components/domain/download-invoice-button";
 import { formatRupiah } from "@/lib/format";
 import { formatTanggalWaktu } from "@/lib/date";
 import { cn } from "@/lib/utils";
@@ -539,7 +540,7 @@ function DetailDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-row justify-end gap-2">
           <Button
             variant="outline"
             render={
@@ -548,6 +549,7 @@ function DetailDialog({
               </Link>
             }
           />
+          <DownloadInvoiceButton kind="shift" sessionId={item.id} label="Unduh PDF" />
         </DialogFooter>
       </DialogContent>
     </Dialog>

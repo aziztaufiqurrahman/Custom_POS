@@ -7,6 +7,7 @@ import type { CompletedSale } from "./types";
 import { PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { formatRupiah } from "@/lib/format";
 import { formatTanggalWaktu } from "@/lib/date";
+import { DownloadInvoiceButton } from "@/components/domain/download-invoice-button";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -89,14 +90,20 @@ export function ReceiptDialog({
         </div>
 
         <DialogFooter className="flex-row justify-between sm:justify-between">
-          <Button
-            variant="outline"
-            render={
-              <Link href={`/print/receipt/${receipt.transaction_id}`} target="_blank">
-                <Printer className="size-4" /> Cetak
-              </Link>
-            }
-          />
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              render={
+                <Link href={`/print/receipt/${receipt.transaction_id}`} target="_blank">
+                  <Printer className="size-4" /> Cetak
+                </Link>
+              }
+            />
+            <DownloadInvoiceButton
+              kind="receipt"
+              transactionId={receipt.transaction_id}
+            />
+          </div>
           <Button onClick={onClose}>Transaksi Baru</Button>
         </DialogFooter>
       </DialogContent>
