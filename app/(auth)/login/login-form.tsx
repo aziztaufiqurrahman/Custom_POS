@@ -10,6 +10,7 @@ import { signIn } from "@/app/(auth)/actions";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 
 export function LoginForm() {
@@ -48,9 +49,8 @@ export function LoginForm() {
       </div>
       <div className="grid gap-2">
         <Label htmlFor="password">Kata Sandi</Label>
-        <Input
+        <PasswordInput
           id="password"
-          type="password"
           autoComplete="current-password"
           placeholder="••••••••"
           {...register("password")}

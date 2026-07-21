@@ -6,14 +6,14 @@ export const restockSchema = z.object({
   product_id: z.string().uuid(),
   qty: qty.positive("Jumlah harus lebih dari 0"),
   new_cost: qty.min(0).nullable(),
-  note: z.string().max(200),
+  note: z.string().trim().min(1, "Catatan wajib diisi").max(200),
 });
 export type RestockInput = z.infer<typeof restockSchema>;
 
 export const adjustStockSchema = z.object({
   product_id: z.string().uuid(),
   new_qty: qty.min(0, "Tidak boleh negatif"),
-  note: z.string().max(200),
+  note: z.string().trim().min(1, "Catatan wajib diisi").max(200),
 });
 export type AdjustStockInput = z.infer<typeof adjustStockSchema>;
 

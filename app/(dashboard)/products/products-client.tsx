@@ -178,7 +178,14 @@ export function ProductsClient({
               onValueChange={(v) => setCategory(v ?? "all")}
             >
               <SelectTrigger className="sm:w-44">
-                <SelectValue placeholder="Kategori" />
+                <SelectValue>
+                  {(val: string | null) =>
+                    !val || val === "all"
+                      ? "Semua kategori"
+                      : (categories.find((c) => c.id === val)?.name ??
+                        "Kategori")
+                  }
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua kategori</SelectItem>
@@ -191,7 +198,17 @@ export function ProductsClient({
             </Select>
             <Select value={stock} onValueChange={(v) => setStock(v ?? "all")}>
               <SelectTrigger className="sm:w-40">
-                <SelectValue placeholder="Status stok" />
+                <SelectValue>
+                  {(val: string | null) =>
+                    val === "in"
+                      ? "Tersedia"
+                      : val === "low"
+                        ? "Menipis"
+                        : val === "out"
+                          ? "Habis"
+                          : "Semua stok"
+                  }
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua stok</SelectItem>

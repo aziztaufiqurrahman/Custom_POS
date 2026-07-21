@@ -174,7 +174,14 @@ export function ProductFormDialog({
                     }
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Pilih kategori" />
+                      <SelectValue>
+                        {(val: string | null) =>
+                          !val || val === "none"
+                            ? "Tanpa kategori"
+                            : (categories.find((c) => c.id === val)?.name ??
+                              "Kategori")
+                        }
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Tanpa kategori</SelectItem>
@@ -255,7 +262,15 @@ export function ProductFormDialog({
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger className="w-full">
-                      <SelectValue />
+                      <SelectValue>
+                        {(val: string | null) =>
+                          val === "amount"
+                            ? "Nominal (Rp)"
+                            : val === "percent"
+                              ? "Persen (%)"
+                              : "Tanpa diskon"
+                        }
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Tanpa diskon</SelectItem>

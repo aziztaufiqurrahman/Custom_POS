@@ -4,7 +4,58 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import type { AuditRow } from "./page";
+import { formatRupiah } from "@/lib/format";
 import { formatTanggalRingkas } from "@/lib/date";
+
+const META_LABELS: Record<string, string> = {
+  code: "Kode",
+  grand_total: "Total",
+  method: "Metode",
+  reason: "Alasan",
+  email: "Email",
+  role: "Peran",
+  qty: "Jumlah",
+  new_cost: "HPP baru",
+  from: "Dari",
+  to: "Ke",
+  changed: "Produk berubah",
+  opening_balance: "Uang awal",
+  expected_cash: "Kas seharusnya",
+  counted_cash: "Dihitung",
+  variance: "Selisih",
+  sku: "SKU",
+  name: "Nama",
+  permissions: "Izin",
+  bank: "Bank",
+};
+
+const MONEY_KEYS = new Set([
+  "grand_total",
+  "new_cost",
+  "opening_balance",
+  "expected_cash",
+  "counted_cash",
+  "variance",
+]);
+
+/** Ubah metadata (jsonb) menjadi teks terbaca, mis. "Kode: TRX-…, Total: Rp10.000". */
+function formatMetadata(meta: Record<string, unknown> | null): string {
+  if (!meta) return "-";
+  const entries = Object.entries(meta).filter(
+    ([, v]) => v !== null && v !== undefined && v !== "",
+  );
+  if (entries.length === 0) return "-";
+  return entries
+    .map(([k, v]) => {
+      const label = META_LABELS[k] ?? k;
+      let val: string;
+      if (Array.isArray(v)) val = v.length ? v.join(", ") : "-";
+      else if (MONEY_KEYS.has(k) && typeof v === "number") val = formatRupiah(v);
+      else val = String(v);
+      return `${label}: ${val}`;
+    })
+    .join(" · ");
+}
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -126,8 +177,8 @@ export function AuditLogsClient({
                       <Badge variant="outline">{ACTION_LABELS[r.action] ?? r.action}</Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{r.entity ?? "-"}</TableCell>
-                    <TableCell className="max-w-64 truncate text-xs text-muted-foreground">
-                      {r.metadata ? JSON.stringify(r.metadata) : "-"}
+                    <TableCell className="max-w-80 text-xs text-muted-foreground">
+                      {formatMetadata(r.metadata)}
                     </TableCell>
                   </TableRow>
                 ))

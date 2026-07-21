@@ -157,10 +157,12 @@ export function InventoryClient({
                   <TableRow>
                     <TableHead>Nama</TableHead>
                     <TableHead>SKU</TableHead>
-                    <TableHead className="text-right">Stok</TableHead>
-                    <TableHead className="text-right">Min</TableHead>
-                    <TableHead>Status</TableHead>
-                    {isAdmin && <TableHead className="w-40">Aksi</TableHead>}
+                    <TableHead className="text-center">Stok</TableHead>
+                    <TableHead className="text-center">Min</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                    {isAdmin && (
+                      <TableHead className="w-40 text-center">Aksi</TableHead>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -172,13 +174,13 @@ export function InventoryClient({
                         <TableCell className="text-muted-foreground">
                           {p.sku}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-center">
                           {formatNumber(p.stock)} {p.unit}
                         </TableCell>
-                        <TableCell className="text-right text-muted-foreground">
+                        <TableCell className="text-center text-muted-foreground">
                           {formatNumber(p.min_stock)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-center">
                           {s === "out" ? (
                             <Badge variant="destructive">Habis</Badge>
                           ) : s === "low" ? (
@@ -191,7 +193,7 @@ export function InventoryClient({
                         </TableCell>
                         {isAdmin && (
                           <TableCell>
-                            <div className="flex gap-1">
+                            <div className="flex justify-center gap-1">
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -245,9 +247,9 @@ export function InventoryClient({
                   <TableRow>
                     <TableHead>Waktu</TableHead>
                     <TableHead>Produk</TableHead>
-                    <TableHead>Tipe</TableHead>
-                    <TableHead className="text-right">Perubahan</TableHead>
-                    <TableHead className="text-right">Stok Akhir</TableHead>
+                    <TableHead className="text-center">Tipe</TableHead>
+                    <TableHead className="text-center">Perubahan</TableHead>
+                    <TableHead className="text-center">Stok Akhir</TableHead>
                     <TableHead>Catatan</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -258,21 +260,21 @@ export function InventoryClient({
                         {formatTanggalRingkas(m.created_at)}
                       </TableCell>
                       <TableCell className="font-medium">{m.product_name}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-center">
                         <Badge variant="outline">
                           {MOVEMENT_LABELS[m.type] ?? m.type}
                         </Badge>
                       </TableCell>
                       <TableCell
                         className={cn(
-                          "text-right font-medium",
+                          "text-center font-medium",
                           m.qty_change >= 0 ? "text-emerald-600" : "text-destructive",
                         )}
                       >
                         {m.qty_change >= 0 ? "+" : ""}
                         {formatNumber(m.qty_change)}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-center">
                         {formatNumber(m.stock_after)}
                       </TableCell>
                       <TableCell className="max-w-40 truncate text-muted-foreground">
@@ -451,12 +453,12 @@ function RestockDialog({
             <Input id="rc" type="number" min={0} value={cost} onChange={(e) => setCost(e.target.value)} placeholder="Biarkan kosong jika tetap" />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="rn">Catatan</Label>
+            <Label htmlFor="rn">Catatan *</Label>
             <Input id="rn" value={note} onChange={(e) => setNote(e.target.value)} placeholder="mis. dari supplier X" />
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={submit} disabled={pending || !qty}>
+          <Button onClick={submit} disabled={pending || !qty || !note.trim()}>
             {pending ? "Menyimpan…" : "Simpan"}
           </Button>
         </DialogFooter>
@@ -509,12 +511,12 @@ function AdjustDialog({
             <Input id="aq" type="number" min={0} value={qty} onChange={(e) => setQty(e.target.value)} />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="an">Catatan</Label>
+            <Label htmlFor="an">Catatan *</Label>
             <Input id="an" value={note} onChange={(e) => setNote(e.target.value)} placeholder="mis. barang rusak" />
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={submit} disabled={pending}>
+          <Button onClick={submit} disabled={pending || !note.trim()}>
             {pending ? "Menyimpan…" : "Simpan"}
           </Button>
         </DialogFooter>

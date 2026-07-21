@@ -27,6 +27,7 @@ import {
 } from "@/lib/validations/employee";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -166,7 +167,7 @@ function AddEmployeeDialog({ onDone }: { onDone: () => void }) {
           </div>
           <div className="grid gap-2">
             <Label htmlFor="add-pass">Kata sandi awal</Label>
-            <Input id="add-pass" type="text" {...form.register("password")} />
+            <PasswordInput id="add-pass" {...form.register("password")} />
             <FieldError msg={form.formState.errors.password?.message} />
           </div>
           <div className="grid gap-2">
