@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { QrisUploader } from "@/components/domain/qris-uploader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { RupiahInput } from "@/components/ui/rupiah-input";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -53,14 +54,14 @@ export function PaymentDialog({
   onCompleted: (sale: CompletedSale) => void;
 }) {
   const [method, setMethod] = useState<Method>("cash");
-  const [received, setReceived] = useState("");
+  const [received, setReceived] = useState(0);
   const [reference, setReference] = useState("");
   const [bank, setBank] = useState<PosBank["bank"] | null>(banks[0]?.bank ?? null);
   const [qrisUrl, setQrisUrl] = useState(settings.qris_image_url);
   const [pending, start] = useTransition();
 
   const total = totals.grandTotal;
-  const receivedNum = Number(received) || 0;
+  const receivedNum = received;
   const change = Math.max(0, receivedNum - total);
   const selectedBank = banks.find((b) => b.bank === bank) ?? null;
 
@@ -168,12 +169,10 @@ export function PaymentDialog({
           <div className="space-y-3">
             <div className="grid gap-2">
               <Label htmlFor="received">Uang diterima</Label>
-              <Input
+              <RupiahInput
                 id="received"
-                type="number"
-                min={0}
                 value={received}
-                onChange={(e) => setReceived(e.target.value)}
+                onValueChange={setReceived}
                 placeholder="0"
               />
             </div>
@@ -181,7 +180,7 @@ export function PaymentDialog({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setReceived(String(total))}
+                onClick={() => setReceived(total)}
               >
                 Uang pas
               </Button>
@@ -190,7 +189,7 @@ export function PaymentDialog({
                   key={n}
                   variant="outline"
                   size="sm"
-                  onClick={() => setReceived(String(n))}
+                  onClick={() => setReceived(n)}
                 >
                   {formatRupiah(n)}
                 </Button>

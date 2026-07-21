@@ -25,6 +25,7 @@ import { formatNumber, formatRupiah } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { RupiahInput } from "@/components/ui/rupiah-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -392,13 +393,9 @@ export function PosClient({
                     </div>
                     <div className="mt-1.5 flex items-center gap-1.5">
                       <span className="text-xs text-muted-foreground">Diskon</span>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={c.discount || ""}
-                        onChange={(e) =>
-                          setDiscount(c.product.id, Number(e.target.value) || 0)
-                        }
+                      <RupiahInput
+                        value={c.discount}
+                        onValueChange={(v) => setDiscount(c.product.id, v)}
                         className="h-7 w-28 text-xs"
                         placeholder="0"
                       />
@@ -416,12 +413,10 @@ export function PosClient({
                 <Label htmlFor="orderDisc" className="text-xs">
                   Diskon total
                 </Label>
-                <Input
+                <RupiahInput
                   id="orderDisc"
-                  type="number"
-                  min={0}
-                  value={orderDiscount || ""}
-                  onChange={(e) => setOrderDiscount(Number(e.target.value) || 0)}
+                  value={orderDiscount}
+                  onValueChange={setOrderDiscount}
                   className="h-7 w-32 text-xs"
                   placeholder="0"
                 />

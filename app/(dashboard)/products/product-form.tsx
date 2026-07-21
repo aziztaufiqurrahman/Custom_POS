@@ -15,6 +15,7 @@ import {
 } from "@/components/domain/product-image-uploader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { RupiahInput } from "@/components/ui/rupiah-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -204,12 +205,17 @@ export function ProductFormDialog({
 
             <div className="grid gap-2">
               <Label htmlFor="sell_price">Harga jual (Rp) *</Label>
-              <Input
-                id="sell_price"
-                type="number"
-                min={0}
-                step={1}
-                {...register("sell_price", { valueAsNumber: true })}
+              <Controller
+                control={control}
+                name="sell_price"
+                render={({ field }) => (
+                  <RupiahInput
+                    id="sell_price"
+                    value={field.value ?? 0}
+                    onValueChange={field.onChange}
+                    placeholder="0"
+                  />
+                )}
               />
               <FieldError msg={errors.sell_price?.message} />
             </div>
@@ -217,12 +223,17 @@ export function ProductFormDialog({
             {isAdmin && (
               <div className="grid gap-2">
                 <Label htmlFor="cost_price">Harga modal (Rp)</Label>
-                <Input
-                  id="cost_price"
-                  type="number"
-                  min={0}
-                  step={1}
-                  {...register("cost_price", { valueAsNumber: true })}
+                <Controller
+                  control={control}
+                  name="cost_price"
+                  render={({ field }) => (
+                    <RupiahInput
+                      id="cost_price"
+                      value={field.value ?? 0}
+                      onValueChange={field.onChange}
+                      placeholder="0"
+                    />
+                  )}
                 />
                 <p className="text-xs text-muted-foreground">
                   Hanya terlihat admin.

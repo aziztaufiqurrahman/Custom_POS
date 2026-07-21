@@ -17,7 +17,7 @@ import { formatRupiah } from "@/lib/format";
 import { formatTanggalWaktu } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { RupiahInput } from "@/components/ui/rupiah-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -62,12 +62,12 @@ function VarianceBadge({ variance }: { variance: number }) {
 }
 
 function OpenShiftCard({ onDone }: { onDone: () => void }) {
-  const [value, setValue] = useState("0");
+  const [value, setValue] = useState(0);
   const [pending, start] = useTransition();
 
   function submit() {
     start(async () => {
-      const res = await openShift({ opening_balance: Number(value) || 0 });
+      const res = await openShift({ opening_balance: value });
       if (res.error) {
         toast.error(res.error);
         return;
@@ -91,12 +91,11 @@ function OpenShiftCard({ onDone }: { onDone: () => void }) {
       <CardContent className="space-y-3">
         <div className="grid max-w-xs gap-2">
           <Label htmlFor="opening">Uang awal (Rp)</Label>
-          <Input
+          <RupiahInput
             id="opening"
-            type="number"
-            min={0}
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onValueChange={setValue}
+            placeholder="0"
           />
         </div>
         <Button onClick={submit} disabled={pending}>
@@ -119,20 +118,20 @@ function CloseShiftDialog({
   onClosed: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [counted, setCounted] = useState("");
+  const [counted, setCounted] = useState(0);
   const [note, setNote] = useState("");
   const [pending, start] = useTransition();
 
   const recon = computeReconciliation({
     openingBalance: opening,
     totalCash,
-    countedCash: Number(counted) || 0,
+    countedCash: counted,
   });
 
   function submit() {
     start(async () => {
       const res = await closeShift({
-        counted_cash: Number(counted) || 0,
+        counted_cash: counted,
         note,
       });
       if (res.error) {
@@ -159,12 +158,10 @@ function CloseShiftDialog({
         <div className="space-y-3">
           <div className="grid gap-2">
             <Label htmlFor="counted">Hitungan fisik tunai (Rp)</Label>
-            <Input
+            <RupiahInput
               id="counted"
-              type="number"
-              min={0}
               value={counted}
-              onChange={(e) => setCounted(e.target.value)}
+              onValueChange={setCounted}
               placeholder="0"
             />
           </div>
@@ -173,7 +170,7 @@ function CloseShiftDialog({
             <Row label="Uang awal" value={formatRupiah(opening)} />
             <Row label="+ Penjualan tunai" value={formatRupiah(totalCash)} />
             <Row label="= Kas seharusnya" value={formatRupiah(recon.expectedCash)} strong />
-            <Row label="Hitungan fisik" value={formatRupiah(Number(counted) || 0)} />
+            <Row label="Hitungan fisik" value={formatRupiah(counted)} />
             <div className="mt-1 flex items-center justify-between border-t pt-2 text-sm">
               <span className="text-muted-foreground">Selisih</span>
               <VarianceBadge variance={recon.variance} />

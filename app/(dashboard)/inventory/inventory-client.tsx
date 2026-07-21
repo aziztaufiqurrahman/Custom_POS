@@ -13,6 +13,7 @@ import { formatTanggalRingkas } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { RupiahInput } from "@/components/ui/rupiah-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -413,7 +414,7 @@ function RestockDialog({
   onDone: () => void;
 }) {
   const [qty, setQty] = useState("");
-  const [cost, setCost] = useState("");
+  const [cost, setCost] = useState(0);
   const [note, setNote] = useState("");
   const [pending, start] = useTransition();
 
@@ -422,7 +423,7 @@ function RestockDialog({
       const res = await restockProduct({
         product_id: product.id,
         qty: Number(qty) || 0,
-        new_cost: cost === "" ? null : Number(cost),
+        new_cost: cost > 0 ? cost : null,
         note,
       });
       if (res.error) {
@@ -450,7 +451,7 @@ function RestockDialog({
           </div>
           <div className="grid gap-2">
             <Label htmlFor="rc">Harga modal baru (opsional)</Label>
-            <Input id="rc" type="number" min={0} value={cost} onChange={(e) => setCost(e.target.value)} placeholder="Biarkan kosong jika tetap" />
+            <RupiahInput id="rc" value={cost} onValueChange={setCost} placeholder="Biarkan kosong jika tetap" />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="rn">Catatan *</Label>
