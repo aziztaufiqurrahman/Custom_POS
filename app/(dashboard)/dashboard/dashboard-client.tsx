@@ -153,10 +153,18 @@ export function DashboardClient({
             <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           </div>
           <div className="grid gap-1.5">
-            <Label className="text-xs">Kelompokkan</Label>
+            <Label className="text-xs">Filter</Label>
             <Select value={bucket} onValueChange={(v) => setBucket(v ?? "day")}>
               <SelectTrigger className="w-36">
-                <SelectValue />
+                <SelectValue>
+                  {(val: string | null) =>
+                    val === "week"
+                      ? "Mingguan"
+                      : val === "month"
+                        ? "Bulanan"
+                        : "Harian"
+                  }
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="day">Harian</SelectItem>
