@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
-import { Banknote, Bike, QrCode, Landmark, ShoppingBag } from "lucide-react";
+import { Banknote, Bike, QrCode, Landmark, Maximize2, ShoppingBag, X } from "lucide-react";
 
 import { createSale } from "./actions";
 import type { PosBank, PosSettings } from "./page";
@@ -60,6 +60,7 @@ export function PaymentDialog({
   const [reference, setReference] = useState("");
   const [bank, setBank] = useState<PosBank["bank"] | null>(banks[0]?.bank ?? null);
   const [qrisUrl, setQrisUrl] = useState(settings.qris_image_url);
+  const [qrisZoom, setQrisZoom] = useState(false);
   const [pending, start] = useTransition();
 
   const total = totals.grandTotal + shipping;
@@ -134,6 +135,7 @@ export function PaymentDialog({
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92svh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
@@ -222,8 +224,20 @@ export function PaymentDialog({
         {method === "qris" && (
           <div className="space-y-3">
             {qrisUrl ? (
-              <div className="relative mx-auto aspect-square w-56 overflow-hidden rounded-md border">
-                <Image src={qrisUrl} alt="QRIS" fill className="object-contain" sizes="224px" />
+              <div className="flex flex-col items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setQrisZoom(true)}
+                  className="group relative mx-auto aspect-square w-56 cursor-zoom-in overflow-hidden rounded-md border transition hover:border-primary"
+                >
+                  <Image src={qrisUrl} alt="QRIS" fill className="object-contain" sizes="224px" />
+                  <span className="absolute bottom-1 right-1 flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] text-white">
+                    <Maximize2 className="size-3" /> Perbesar
+                  </span>
+                </button>
+                <p className="text-xs text-muted-foreground">
+                  Ketuk QR untuk tampilkan layar penuh
+                </p>
               </div>
             ) : (
               <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
@@ -325,6 +339,32 @@ export function PaymentDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+      {qrisZoom && qrisUrl && (
+        <div
+          className="fixed inset-0 z-120 flex items-center justify-center bg-black/85 p-4"
+          onClick={() => setQrisZoom(false)}
+        >
+          <button
+            type="button"
+            aria-label="Tutup"
+            onClick={() => setQrisZoom(false)}
+            className="absolute right-4 top-4 rounded-full bg-white/15 p-2 text-white transition hover:bg-white/30"
+          >
+            <X className="size-6" />
+          </button>
+          <div
+            className="relative aspect-square w-full max-w-[88vmin] rounded-xl bg-white p-4 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Image src={qrisUrl} alt="QRIS" fill className="object-contain p-2" sizes="88vmin" />
+          </div>
+          <p className="absolute bottom-6 left-0 right-0 text-center text-sm text-white/80">
+            Ketuk di luar QR atau tombol × untuk menutup
+          </p>
+        </div>
+      )}
+    </>
   );
 }
 

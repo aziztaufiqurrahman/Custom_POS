@@ -94,6 +94,7 @@ export type Database = {
           created_by: string | null
           id: string
           note: string | null
+          source: string
         }
         Insert: {
           amount: number
@@ -103,6 +104,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           note?: string | null
+          source?: string
         }
         Update: {
           amount?: number
@@ -112,6 +114,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           note?: string | null
+          source?: string
         }
         Relationships: [
           {

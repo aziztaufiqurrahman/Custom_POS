@@ -45,28 +45,42 @@ export async function getSessionBreakdown(
   return result;
 }
 
+export type ExpenseSource = "cash" | "BNI" | "BCA" | "BSI";
+
 export type ExpenseItem = {
   id: string;
   amount: number;
   category: string;
+  source: ExpenseSource;
   note: string | null;
   created_at: string;
 };
 
-export type SessionExpenses = { total: number; items: ExpenseItem[] };
+export type SessionExpenses = {
+  total: number; // seluruh pengeluaran (semua kanal)
+  cash: number; // pengeluaran dari kas laci (mengurangi kas seharusnya)
+  bySource: Record<ExpenseSource, number>;
+  items: ExpenseItem[];
+};
 
-/** Daftar & total pengeluaran (kas keluar) satu shift. Tunduk RLS. */
+/** Daftar & total pengeluaran (kas keluar) satu shift, dipecah per kanal. Tunduk RLS. */
 export async function getSessionExpenses(
   supabase: Client,
   sessionId: string,
 ): Promise<SessionExpenses> {
   const { data } = await supabase
     .from("cash_expenses")
-    .select("id, amount, category, note, created_at")
+    .select("id, amount, category, source, note, created_at")
     .eq("cash_session_id", sessionId)
     .order("created_at", { ascending: false });
 
   const items = (data ?? []) as ExpenseItem[];
-  const total = items.reduce((s, e) => s + e.amount, 0);
-  return { total, items };
+  const bySource: Record<ExpenseSource, number> = { cash: 0, BNI: 0, BCA: 0, BSI: 0 };
+  let total = 0;
+  for (const e of items) {
+    total += e.amount;
+    const src = (["cash", "BNI", "BCA", "BSI"].includes(e.source) ? e.source : "cash") as ExpenseSource;
+    bySource[src] += e.amount;
+  }
+  return { total, cash: bySource.cash, bySource, items };
 }

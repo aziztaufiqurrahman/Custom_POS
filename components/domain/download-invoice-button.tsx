@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Download, Loader2 } from "lucide-react";
 
 import { getReceiptInvoice, getShiftInvoice } from "@/lib/invoice-actions";
-import { downloadReceiptInvoicePdf, downloadShiftInvoicePdf } from "@/lib/pdf";
+import { downloadReceiptInvoicePng, downloadShiftInvoicePng } from "@/lib/png-invoice";
 import { Button } from "@/components/ui/button";
 
 type Props = {
@@ -31,16 +31,16 @@ export function DownloadInvoiceButton(props: Props) {
           toast.error("Data invoice tidak ditemukan");
           return;
         }
-        await downloadReceiptInvoicePdf(data);
+        await downloadReceiptInvoicePng(data);
       } else {
         const data = await getShiftInvoice(props.sessionId);
         if (!data) {
           toast.error("Data shift tidak ditemukan");
           return;
         }
-        await downloadShiftInvoicePdf(data);
+        await downloadShiftInvoicePng(data);
       }
-      toast.success("PDF berhasil diunduh");
+      toast.success("Gambar (PNG) berhasil diunduh");
     } catch {
       toast.error("Gagal membuat PDF");
     } finally {

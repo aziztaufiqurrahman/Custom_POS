@@ -124,6 +124,7 @@ export async function getReceiptInvoice(
 /** Data lengkap untuk unduh ringkasan shift. */
 export type ShiftInvoiceExpense = {
   category: string;
+  source: string;
   note: string | null;
   amount: number;
 };
@@ -147,6 +148,7 @@ export type ShiftInvoice = {
   transferByBank: { BNI: number; BCA: number; BSI: number };
   count: number;
   expenses: ShiftInvoiceExpense[];
+  expensesBySource: { cash: number; BNI: number; BCA: number; BSI: number };
 };
 
 export async function getShiftInvoice(id: string): Promise<ShiftInvoice | null> {
@@ -194,8 +196,10 @@ export async function getShiftInvoice(id: string): Promise<ShiftInvoice | null> 
     count: b.count,
     expenses: e.items.map((x) => ({
       category: x.category,
+      source: x.source,
       note: x.note,
       amount: x.amount,
     })),
+    expensesBySource: e.bySource,
   };
 }

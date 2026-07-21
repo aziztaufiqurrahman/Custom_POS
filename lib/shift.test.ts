@@ -43,11 +43,11 @@ describe("computeReconciliation", () => {
     expect(r.variance).toBe(0);
   });
 
-  it("pengeluaran kas mengurangi kas seharusnya", () => {
+  it("pengeluaran kas tunai mengurangi kas seharusnya", () => {
     const r = computeReconciliation({
       openingBalance: 100000,
       totalCash: 250000,
-      totalExpenses: 40000,
+      cashExpenses: 40000,
       countedCash: 310000,
     });
     expect(r.expectedCash).toBe(310000); // 100000 + 250000 - 40000

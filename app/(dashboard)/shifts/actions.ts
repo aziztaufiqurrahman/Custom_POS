@@ -78,7 +78,7 @@ export async function closeShift(raw: unknown): Promise<ShiftActionResult> {
   const { expectedCash, variance } = computeReconciliation({
     openingBalance: session.opening_balance,
     totalCash: b.cash,
-    totalExpenses: expenses.total,
+    cashExpenses: expenses.cash, // hanya pengeluaran TUNAI yang mengurangi kas laci
     countedCash: parsed.data.counted_cash,
   });
 
@@ -148,6 +148,7 @@ export async function addExpense(raw: unknown): Promise<ShiftActionResult> {
       cash_session_id: session.id,
       amount: parsed.data.amount,
       category: parsed.data.category,
+      source: parsed.data.source,
       note: parsed.data.note || null,
       created_by: userId,
     })
@@ -163,6 +164,7 @@ export async function addExpense(raw: unknown): Promise<ShiftActionResult> {
     metadata: {
       amount: parsed.data.amount,
       category: parsed.data.category,
+      source: parsed.data.source,
       note: parsed.data.note || null,
     },
   });

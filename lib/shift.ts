@@ -47,16 +47,17 @@ export type Reconciliation = {
 };
 
 /**
- * expected_cash = opening_balance + total penjualan CASH - total pengeluaran (kas keluar)
+ * expected_cash = opening_balance + penjualan TUNAI - pengeluaran TUNAI (kas keluar dari laci)
  * variance      = counted_cash - expected_cash
+ * Catatan: pengeluaran dari bank (BNI/BCA/BSI) TIDAK mengurangi kas laci.
  */
 export function computeReconciliation(input: {
   openingBalance: number;
   totalCash: number;
   countedCash: number;
-  totalExpenses?: number;
+  cashExpenses?: number;
 }): Reconciliation {
-  const expenses = input.totalExpenses ?? 0;
+  const expenses = input.cashExpenses ?? 0;
   const expectedCash = round2(input.openingBalance + input.totalCash - expenses);
   const variance = round2(input.countedCash - expectedCash);
   return { expectedCash, variance };

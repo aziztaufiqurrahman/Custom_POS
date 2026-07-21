@@ -22,11 +22,16 @@ export const EXPENSE_CATEGORIES = [
   "lainnya",
 ] as const;
 
+/** Kanal sumber uang keluar. Selaras dengan kanal pemasukan (kas & transfer bank). */
+export const EXPENSE_SOURCES = ["cash", "BNI", "BCA", "BSI"] as const;
+export type ExpenseSource = (typeof EXPENSE_SOURCES)[number];
+
 export const expenseSchema = z.object({
   amount: z
     .number({ message: "Harus berupa angka" })
     .positive("Nominal harus lebih dari 0"),
   category: z.enum(EXPENSE_CATEGORIES),
+  source: z.enum(EXPENSE_SOURCES),
   note: z.string().max(200),
 });
 export type ExpenseInput = z.infer<typeof expenseSchema>;
