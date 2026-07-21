@@ -3,12 +3,13 @@
 import { useTransition } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, LogOut, Menu } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 
 import { signOut } from "@/app/(dashboard)/actions";
 import { useAuth } from "@/components/providers/auth-provider";
 import { NAV_ITEMS } from "@/lib/nav";
 import { cn } from "@/lib/utils";
+import { NotificationBell } from "@/components/layout/notification-bell";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -92,21 +93,7 @@ export function Topbar() {
 
       <div className="flex items-center gap-1">
         {/* Notifikasi */}
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={<Button variant="ghost" size="icon" className="relative" />}
-          >
-            <Bell className="size-5" />
-            <span className="sr-only">Notifikasi</span>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-64">
-            <div className="px-2 py-1.5 text-sm font-medium">Notifikasi</div>
-            <DropdownMenuSeparator />
-            <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-              Belum ada notifikasi.
-            </div>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <NotificationBell />
 
         {/* Akun */}
         <DropdownMenu>

@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth";
 import { isAdmin } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
+import { formatRupiah } from "@/lib/format";
 import { createSaleSchema } from "@/lib/validations/sale";
 import type { Json } from "@/types/database";
 
@@ -51,6 +52,18 @@ export async function createSale(raw: unknown): Promise<CreateSaleResult> {
   }
 
   const receipt = data as unknown as SaleReceipt;
+
+  // Pengingat: ongkos kirim perlu dicatat sebagai pengeluaran shift.
+  if (d.shipping_cost > 0) {
+    await supabase.from("notifications").insert({
+      user_id: userId,
+      type: "ongkir",
+      title: "Ongkos kirim perlu dicatat",
+      body: `Tambahkan ongkos kirim ${formatRupiah(d.shipping_cost)} ke pengeluaran shift.`,
+      link: "/shifts",
+    });
+  }
+
   revalidatePath("/shifts");
   revalidatePath("/sales");
   return { receipt };
