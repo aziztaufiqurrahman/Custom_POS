@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
 import { requireAdmin } from "@/lib/auth";
@@ -13,6 +14,13 @@ import {
 } from "@/lib/validations/employee";
 
 export type EmployeeActionResult = { error?: string; success?: boolean };
+
+async function getOrigin(): Promise<string> {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  return `${proto}://${host}`;
+}
 
 export async function createEmployee(
   raw: unknown,
@@ -33,18 +41,23 @@ export async function createEmployee(
   }
 
   const admin = createAdminClient();
-  const { data: created, error } = await admin.auth.admin.createUser({
-    email: data.email,
-    password: data.password,
-    email_confirm: true,
-    user_metadata: { full_name: data.full_name },
-  });
+  const origin = await getOrigin();
+  // Kirim undangan email — karyawan membuat kata sandinya sendiri lewat tautan.
+  const { data: created, error } = await admin.auth.admin.inviteUserByEmail(
+    data.email,
+    {
+      data: { full_name: data.full_name },
+      redirectTo: `${origin}/auth/callback?next=/reset-password`,
+    },
+  );
 
   if (error || !created.user) {
     const exists =
-      error?.status === 422 || /already/i.test(error?.message ?? "");
+      error?.status === 422 || /already|registered|exist/i.test(error?.message ?? "");
     return {
-      error: exists ? "Email sudah terdaftar" : "Gagal membuat akun karyawan",
+      error: exists
+        ? "Email sudah terdaftar"
+        : "Gagal mengirim undangan. Pastikan SMTP email sudah dikonfigurasi.",
     };
   }
 
@@ -152,6 +165,9 @@ export async function sendEmployeeReset(
 ): Promise<EmployeeActionResult> {
   await requireAdmin();
   const supabase = await createClient();
-  await supabase.auth.resetPasswordForEmail(email);
+  const origin = await getOrigin();
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/auth/callback?next=/reset-password`,
+  });
   return { success: true };
 }

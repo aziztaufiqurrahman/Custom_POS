@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="id">
+  <body style="margin:0;padding:0;background:#f5efe4;font-family:Arial,Helvetica,sans-serif;color:#3a2c22;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Konfirmasi alamat email Anda di Pudingkuu Lucky.</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5efe4;padding:24px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%;background:#fffdf8;border:1px solid #e7dcc8;border-radius:14px;overflow:hidden;">
+            <tr>
+              <td style="background:#9c6a44;padding:28px 32px;text-align:center;">
+                <div style="font-size:22px;font-weight:bold;color:#ffffff;letter-spacing:0.3px;">Pudingkuu Lucky</div>
+                <div style="font-size:13px;color:#f0e2d3;font-style:italic;margin-top:4px;">Pudingna Urang Bandung</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px;">
+                <h1 style="font-size:19px;margin:0 0 12px;color:#3a2c22;">Konfirmasi Email Anda</h1>
+                <p style="font-size:14px;line-height:1.7;margin:0 0 16px;color:#5a4a3d;">
+                  Terima kasih telah mendaftar di aplikasi kasir
+                  <b>Pudingkuu Lucky</b>. Silakan konfirmasi alamat email Anda dengan
+                  menekan tombol di bawah ini untuk mengaktifkan akun.
+                </p>
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px auto;">
+                  <tr>
+                    <td align="center" style="border-radius:10px;background:#9c6a44;">
+                      <a href="{{ .ConfirmationURL }}" target="_blank"
+                        style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:10px;">
+                        Konfirmasi Email
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+                <p style="font-size:12px;line-height:1.6;margin:0 0 6px;color:#8a7a6c;">
+                  Jika tombol tidak berfungsi, salin dan tempel tautan berikut ke peramban Anda:
+                </p>
+                <p style="font-size:12px;line-height:1.6;margin:0 0 16px;word-break:break-all;">
+                  <a href="{{ .ConfirmationURL }}" style="color:#9c6a44;">{{ .ConfirmationURL }}</a>
+                </p>
+                <p style="font-size:12px;line-height:1.6;margin:0;color:#8a7a6c;">
+                  Jika Anda tidak membuat akun ini, silakan abaikan email ini.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="background:#f5efe4;padding:18px 32px;text-align:center;border-top:1px solid #e7dcc8;">
+                <div style="font-size:12px;color:#8a7a6c;">Pudingkuu Lucky · Pudingna Urang Bandung</div>
+                <div style="font-size:11px;color:#a99a8a;margin-top:4px;">Email otomatis — mohon tidak membalas.</div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

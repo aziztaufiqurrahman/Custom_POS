@@ -8,7 +8,6 @@ export const createEmployeeSchema = z.object({
   full_name: z.string().min(1, "Nama wajib diisi").max(120),
   email: z.string().email("Email tidak valid"),
   phone: z.string().max(30).optional().or(z.literal("")),
-  password: z.string().min(8, "Kata sandi minimal 8 karakter"),
   role: z.enum(["admin", "kasir"]),
   permissions: z.array(permissionEnum),
 });

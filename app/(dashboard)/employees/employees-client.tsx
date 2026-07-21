@@ -27,7 +27,6 @@ import {
 } from "@/lib/validations/employee";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -117,7 +116,6 @@ function AddEmployeeDialog({ onDone }: { onDone: () => void }) {
       full_name: "",
       email: "",
       phone: "",
-      password: "",
       role: "kasir",
       permissions: [],
     },
@@ -131,7 +129,7 @@ function AddEmployeeDialog({ onDone }: { onDone: () => void }) {
         toast.error(res.error);
         return;
       }
-      toast.success("Karyawan ditambahkan");
+      toast.success("Undangan dikirim ke email karyawan");
       setOpen(false);
       form.reset();
       onDone();
@@ -141,13 +139,14 @@ function AddEmployeeDialog({ onDone }: { onDone: () => void }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <Button onClick={() => setOpen(true)}>
-        <Plus className="size-4" /> Tambah Karyawan
+        <Plus className="size-4" /> Undang Karyawan
       </Button>
       <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Tambah Karyawan</DialogTitle>
+          <DialogTitle>Undang Karyawan</DialogTitle>
           <DialogDescription>
-            Buat akun karyawan baru beserta peran & hak aksesnya.
+            Karyawan akan menerima email undangan untuk membuat kata sandi sendiri
+            dan mengaktifkan akunnya.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -164,11 +163,6 @@ function AddEmployeeDialog({ onDone }: { onDone: () => void }) {
           <div className="grid gap-2">
             <Label htmlFor="add-phone">No. HP (opsional)</Label>
             <Input id="add-phone" {...form.register("phone")} />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="add-pass">Kata sandi awal</Label>
-            <PasswordInput id="add-pass" {...form.register("password")} />
-            <FieldError msg={form.formState.errors.password?.message} />
           </div>
           <div className="grid gap-2">
             <Label>Peran</Label>
@@ -201,7 +195,7 @@ function AddEmployeeDialog({ onDone }: { onDone: () => void }) {
           />
           <DialogFooter>
             <Button type="submit" disabled={pending}>
-              {pending ? "Menyimpan…" : "Simpan"}
+              {pending ? "Mengirim…" : "Kirim Undangan"}
             </Button>
           </DialogFooter>
         </form>
@@ -353,7 +347,7 @@ export function EmployeesClient({
         <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
           Konfigurasi server belum lengkap: <b>SUPABASE_SERVICE_ROLE_KEY</b> belum
           di-set di Vercel. Email karyawan tidak tampil dan fitur{" "}
-          <b>Tambah Karyawan</b> dinonaktifkan. Edit peran/izin, aktif/nonaktif, dan
+          <b>Undang Karyawan</b> dinonaktifkan. Edit peran/izin, aktif/nonaktif, dan
           reset password tetap berfungsi.
         </div>
       )}
@@ -367,7 +361,7 @@ export function EmployeesClient({
           </div>
           {serviceRoleMissing ? (
             <Button disabled>
-              <Plus className="size-4" /> Tambah Karyawan
+              <Plus className="size-4" /> Undang Karyawan
             </Button>
           ) : (
             <AddEmployeeDialog onDone={refresh} />
