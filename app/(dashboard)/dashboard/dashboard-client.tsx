@@ -56,6 +56,8 @@ const METHOD_META = [
   { key: "cash", label: "Tunai", color: "#9c6a44" },
   { key: "qris", label: "QRIS", color: "#7a9b5e" },
   { key: "transfer", label: "Transfer", color: "#d99a55" },
+  { key: "gofood", label: "GoFood", color: "#c0392b" },
+  { key: "shopeefood", label: "ShopeeFood", color: "#e67e22" },
 ] as const;
 const PRIMARY = "#9c6a44";
 
@@ -178,11 +180,16 @@ export function DashboardClient({
       </Card>
 
       {/* Ringkasan rentang terpilih */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Kpi label="Pendapatan (rentang)" value={formatRupiah(analytics.revenue)} />
         <Kpi label="Transaksi" value={formatNumber(analytics.tx_count)} />
         <Kpi label="Item Terjual" value={formatNumber(analytics.items_sold)} />
         <Kpi label="Laba Kotor (rentang)" value={formatRupiah(analytics.gross_profit)} />
+        <Kpi
+          label="Total Ongkos Kirim"
+          value={formatRupiah(analytics.shipping_total)}
+          sub="di luar pendapatan"
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -282,19 +289,31 @@ export function DashboardClient({
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                {(analytics.by_bank?.BNI || analytics.by_bank?.BCA || analytics.by_bank?.BSI) ? (
-                  <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
-                    <p>Transfer per bank:</p>
-                    <div className="flex justify-between"><span>BNI</span><span>{formatRupiah(analytics.by_bank.BNI ?? 0)}</span></div>
-                    <div className="flex justify-between"><span>BCA</span><span>{formatRupiah(analytics.by_bank.BCA ?? 0)}</span></div>
-                    <div className="flex justify-between"><span>BSI</span><span>{formatRupiah(analytics.by_bank.BSI ?? 0)}</span></div>
-                  </div>
-                ) : null}
               </>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Pendapatan Transfer per Bank — kolom masing-masing */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Pendapatan Transfer per Bank</CardTitle>
+          <CardDescription>Rincian nilai transfer masuk per bank.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {(["BNI", "BCA", "BSI"] as const).map((b) => (
+              <div key={b} className="rounded-lg border bg-muted/30 p-4 text-center">
+                <p className="text-sm font-semibold">{b}</p>
+                <p className="mt-1 text-lg font-bold">
+                  {formatRupiah(analytics.by_bank?.[b] ?? 0)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Produk terlaris */}

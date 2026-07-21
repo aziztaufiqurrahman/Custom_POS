@@ -6,6 +6,8 @@ export type PaymentBreakdown = {
   cash: number;
   qris: number;
   transfer: number;
+  gofood: number;
+  shopeefood: number;
   transferByBank: Record<Bank, number>;
   count: number; // jumlah transaksi selesai
 };
@@ -15,6 +17,8 @@ export function emptyBreakdown(): PaymentBreakdown {
     cash: 0,
     qris: 0,
     transfer: 0,
+    gofood: 0,
+    shopeefood: 0,
     transferByBank: { BNI: 0, BCA: 0, BSI: 0 },
     count: 0,
   };
@@ -24,13 +28,17 @@ function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
-/** Total seluruh transaksi = cash + qris + transfer. */
+/** Total seluruh transaksi = cash + qris + transfer + gofood + shopeefood. */
 export function grandTotal(b: {
   cash: number;
   qris: number;
   transfer: number;
+  gofood?: number;
+  shopeefood?: number;
 }): number {
-  return round2(b.cash + b.qris + b.transfer);
+  return round2(
+    b.cash + b.qris + b.transfer + (b.gofood ?? 0) + (b.shopeefood ?? 0),
+  );
 }
 
 export type Reconciliation = {

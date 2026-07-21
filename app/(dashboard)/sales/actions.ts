@@ -14,7 +14,7 @@ export type SaleDetailItem = {
   line_total: number;
 };
 export type SaleDetailPayment = {
-  method: "cash" | "qris" | "transfer";
+  method: "cash" | "qris" | "transfer" | "gofood" | "shopeefood";
   bank: "BNI" | "BCA" | "BSI" | null;
   amount: number;
   cash_received: number | null;
@@ -32,6 +32,7 @@ export type SaleDetail = {
   discount_total: number;
   tax_total: number;
   grand_total: number;
+  shipping_cost: number;
   status: "completed" | "void" | "refunded";
   note: string | null;
   items: SaleDetailItem[];
@@ -68,6 +69,7 @@ export async function getSaleDetail(id: string): Promise<SaleDetail | null> {
     discount_total: trx.discount_total,
     tax_total: trx.tax_total,
     grand_total: trx.grand_total,
+    shipping_cost: trx.shipping_cost ?? 0,
     status: trx.status,
     note: trx.note,
     items: (trx.transaction_items ?? []).map((it) => ({

@@ -14,7 +14,7 @@ export type SaleRow = {
   item_count: number;
   grand_total: number;
   status: "completed" | "void" | "refunded";
-  methods: ("cash" | "qris" | "transfer")[];
+  methods: ("cash" | "qris" | "transfer" | "gofood" | "shopeefood")[];
   bank: "BNI" | "BCA" | "BSI" | null;
 };
 
@@ -79,7 +79,7 @@ export default async function SalesPage({
       ? (cashier[0]?.full_name ?? "-")
       : (cashier?.full_name ?? "-");
     const pays = (t.payments ?? []) as {
-      method: "cash" | "qris" | "transfer";
+      method: "cash" | "qris" | "transfer" | "gofood" | "shopeefood";
       bank: "BNI" | "BCA" | "BSI" | null;
       amount: number;
     }[];

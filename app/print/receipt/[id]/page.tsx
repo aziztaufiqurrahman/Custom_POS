@@ -93,6 +93,9 @@ export default async function ReceiptPrintPage({
         )}
         {trx.tax_total > 0 && <Line label="Pajak" value={formatRupiah(trx.tax_total)} />}
         <Line label="TOTAL" value={formatRupiah(trx.grand_total)} strong />
+        {trx.shipping_cost > 0 && (
+          <Line label="Ongkos kirim" value={formatRupiah(trx.shipping_cost)} />
+        )}
       </div>
 
       <div className="mt-1 border-t border-dashed pt-1">

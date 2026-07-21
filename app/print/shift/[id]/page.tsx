@@ -101,6 +101,8 @@ export default async function ShiftPrintPage({
         <Line label="Transfer BNI" value={formatRupiah(b.transferByBank.BNI)} />
         <Line label="Transfer BCA" value={formatRupiah(b.transferByBank.BCA)} />
         <Line label="Transfer BSI" value={formatRupiah(b.transferByBank.BSI)} />
+        <Line label="GoFood" value={formatRupiah(b.gofood)} />
+        <Line label="ShopeeFood" value={formatRupiah(b.shopeefood)} />
         <Line
           label={`Total (${b.count} transaksi)`}
           value={formatRupiah(grandTotal(b))}

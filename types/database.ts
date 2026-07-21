@@ -98,7 +98,9 @@ export type Database = {
           opening_balance: number
           status: Database["public"]["Enums"]["session_status"]
           total_cash: number
+          total_gofood: number
           total_qris: number
+          total_shopeefood: number
           total_transfer: number
           updated_at: string
           variance: number | null
@@ -115,7 +117,9 @@ export type Database = {
           opening_balance?: number
           status?: Database["public"]["Enums"]["session_status"]
           total_cash?: number
+          total_gofood?: number
           total_qris?: number
+          total_shopeefood?: number
           total_transfer?: number
           updated_at?: string
           variance?: number | null
@@ -132,7 +136,9 @@ export type Database = {
           opening_balance?: number
           status?: Database["public"]["Enums"]["session_status"]
           total_cash?: number
+          total_gofood?: number
           total_qris?: number
+          total_shopeefood?: number
           total_transfer?: number
           updated_at?: string
           variance?: number | null
@@ -599,6 +605,7 @@ export type Database = {
           grand_total: number
           id: string
           note: string | null
+          shipping_cost: number
           status: Database["public"]["Enums"]["transaction_status"]
           subtotal: number
           tax_total: number
@@ -616,6 +623,7 @@ export type Database = {
           grand_total?: number
           id?: string
           note?: string | null
+          shipping_cost?: number
           status?: Database["public"]["Enums"]["transaction_status"]
           subtotal?: number
           tax_total?: number
@@ -633,6 +641,7 @@ export type Database = {
           grand_total?: number
           id?: string
           note?: string | null
+          shipping_cost?: number
           status?: Database["public"]["Enums"]["transaction_status"]
           subtotal?: number
           tax_total?: number
@@ -761,6 +770,7 @@ export type Database = {
           p_note?: string
           p_order_discount?: number
           p_payment: Json
+          p_shipping_cost?: number
         }
         Returns: Json
       }
@@ -803,7 +813,7 @@ export type Database = {
         | "adjustment"
         | "restock"
       opname_status: "draft" | "completed"
-      payment_method: "cash" | "qris" | "transfer"
+      payment_method: "cash" | "qris" | "transfer" | "gofood" | "shopeefood"
       session_status: "open" | "closed"
       transaction_status: "completed" | "void" | "refunded"
       user_role: "admin" | "kasir"
@@ -946,7 +956,7 @@ export const Constants = {
         "restock",
       ],
       opname_status: ["draft", "completed"],
-      payment_method: ["cash", "qris", "transfer"],
+      payment_method: ["cash", "qris", "transfer", "gofood", "shopeefood"],
       session_status: ["open", "closed"],
       transaction_status: ["completed", "void", "refunded"],
       user_role: ["admin", "kasir"],

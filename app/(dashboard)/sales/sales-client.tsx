@@ -106,7 +106,7 @@ export function SalesClient({
 
   const summary = useMemo(() => {
     const completed = rows.filter((r) => r.status === "completed");
-    const byMethod = { cash: 0, qris: 0, transfer: 0 };
+    const byMethod = { cash: 0, qris: 0, transfer: 0, gofood: 0, shopeefood: 0 };
     const byBank = { BNI: 0, BCA: 0, BSI: 0 };
     let revenue = 0;
     let items = 0;
@@ -146,22 +146,27 @@ export function SalesClient({
   return (
     <div className="space-y-4">
       {/* Ringkasan */}
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <Stat label="Total Transaksi" value={formatNumber(summary.count)} sub="selesai" />
         <Stat label="Pendapatan" value={formatRupiah(summary.revenue)} />
         <Stat label="Item Terjual" value={formatNumber(summary.items)} />
-        <Stat
-          label="Per Metode"
-          value={formatRupiah(summary.byMethod.cash)}
-          sub={`Tunai · QRIS ${formatRupiah(summary.byMethod.qris)} · Transfer ${formatRupiah(summary.byMethod.transfer)}`}
-        />
       </div>
-      {summary.byMethod.transfer > 0 && (
-        <div className="text-xs text-muted-foreground">
-          Transfer per bank — BNI {formatRupiah(summary.byBank.BNI)} · BCA{" "}
-          {formatRupiah(summary.byBank.BCA)} · BSI {formatRupiah(summary.byBank.BSI)}
-        </div>
-      )}
+
+      {/* Rincian per metode pembayaran */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        <Stat label="Tunai" value={formatRupiah(summary.byMethod.cash)} />
+        <Stat label="QRIS" value={formatRupiah(summary.byMethod.qris)} />
+        <Stat label="Transfer" value={formatRupiah(summary.byMethod.transfer)} />
+        <Stat label="GoFood" value={formatRupiah(summary.byMethod.gofood)} />
+        <Stat label="ShopeeFood" value={formatRupiah(summary.byMethod.shopeefood)} />
+      </div>
+
+      {/* Transfer per bank — kolom masing-masing bank */}
+      <div className="grid grid-cols-3 gap-2">
+        <Stat label="Transfer BNI" value={formatRupiah(summary.byBank.BNI)} />
+        <Stat label="Transfer BCA" value={formatRupiah(summary.byBank.BCA)} />
+        <Stat label="Transfer BSI" value={formatRupiah(summary.byBank.BSI)} />
+      </div>
 
       <Card>
         <CardHeader>
@@ -189,13 +194,29 @@ export function SalesClient({
               <Label className="text-xs">Metode</Label>
               <Select value={f.method} onValueChange={(v) => setF({ ...f, method: v ?? "all" })}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {(val: string | null) =>
+                      val === "cash"
+                        ? "Tunai"
+                        : val === "qris"
+                          ? "QRIS"
+                          : val === "transfer"
+                            ? "Transfer"
+                            : val === "gofood"
+                              ? "GoFood"
+                              : val === "shopeefood"
+                                ? "ShopeeFood"
+                                : "Semua metode"
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Semua metode</SelectItem>
                   <SelectItem value="cash">Tunai</SelectItem>
                   <SelectItem value="qris">QRIS</SelectItem>
                   <SelectItem value="transfer">Transfer</SelectItem>
+                  <SelectItem value="gofood">GoFood</SelectItem>
+                  <SelectItem value="shopeefood">ShopeeFood</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -429,6 +450,12 @@ function DetailDialog({
                 <span>Total</span>
                 <span>{formatRupiah(detail.grand_total)}</span>
               </div>
+              {detail.shipping_cost > 0 && (
+                <Row
+                  label="Ongkos kirim (di luar pendapatan)"
+                  value={formatRupiah(detail.shipping_cost)}
+                />
+              )}
             </div>
 
             <div className="rounded-md border p-2">

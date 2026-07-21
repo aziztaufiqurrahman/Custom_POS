@@ -14,7 +14,7 @@ export function formatNumber(value: number | null | undefined): string {
  * lingkungan (simbol mata uang IDR pada Intl bisa menyisipkan spasi).
  */
 export function formatRupiah(value: number | null | undefined): string {
-  return `Rp${formatNumber(Math.round(Number(value ?? 0)))}`;
+  return `Rp ${formatNumber(Math.round(Number(value ?? 0)))}`;
 }
 
 /**

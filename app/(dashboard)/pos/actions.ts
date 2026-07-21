@@ -42,6 +42,7 @@ export async function createSale(raw: unknown): Promise<CreateSaleResult> {
     p_customer_name: d.customer_name || undefined,
     p_customer_phone: d.customer_phone || undefined,
     p_note: d.note || undefined,
+    p_shipping_cost: d.shipping_cost,
   });
 
   if (error) {

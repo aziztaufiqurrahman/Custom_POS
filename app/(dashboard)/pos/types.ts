@@ -23,8 +23,9 @@ export type CompletedSale = {
   receipt: SaleReceipt;
   items: ReceiptItem[];
   totals: CartTotals;
+  shipping: number;
   payment: {
-    method: "cash" | "qris" | "transfer";
+    method: "cash" | "qris" | "transfer" | "gofood" | "shopeefood";
     bank: "BNI" | "BCA" | "BSI" | null;
     cashReceived: number | null;
     reference: string;

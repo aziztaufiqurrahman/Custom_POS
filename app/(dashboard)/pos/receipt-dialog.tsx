@@ -83,6 +83,9 @@ export function ReceiptDialog({
             {payment.method === "cash" && (
               <Line label="Kembalian" value={formatRupiah(receipt.change_given)} />
             )}
+            {sale.shipping > 0 && (
+              <Line label="Ongkos kirim" value={formatRupiah(sale.shipping)} />
+            )}
           </div>
         </div>
 

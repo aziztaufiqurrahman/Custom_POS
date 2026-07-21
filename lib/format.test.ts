@@ -3,18 +3,18 @@ import { describe, expect, it } from "vitest";
 import { formatNumber, formatRupiah, parseRupiah } from "./format";
 
 describe("formatRupiah", () => {
-  it("memformat angka menjadi mata uang Rupiah tanpa desimal", () => {
-    expect(formatRupiah(1234567)).toBe("Rp1.234.567");
+  it("memformat angka menjadi mata uang Rupiah tanpa desimal (spasi setelah Rp)", () => {
+    expect(formatRupiah(1234567)).toBe("Rp 1.234.567");
   });
 
   it("menangani 0 dan nilai null/undefined", () => {
-    expect(formatRupiah(0)).toBe("Rp0");
-    expect(formatRupiah(null)).toBe("Rp0");
-    expect(formatRupiah(undefined)).toBe("Rp0");
+    expect(formatRupiah(0)).toBe("Rp 0");
+    expect(formatRupiah(null)).toBe("Rp 0");
+    expect(formatRupiah(undefined)).toBe("Rp 0");
   });
 
   it("membulatkan pecahan ke bilangan bulat", () => {
-    expect(formatRupiah(1000.6)).toBe("Rp1.001");
+    expect(formatRupiah(1000.6)).toBe("Rp 1.001");
   });
 });
 

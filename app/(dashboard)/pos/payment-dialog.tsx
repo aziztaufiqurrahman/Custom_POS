@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
-import { Banknote, QrCode, Landmark } from "lucide-react";
+import { Banknote, Bike, QrCode, Landmark, ShoppingBag } from "lucide-react";
 
 import { createSale } from "./actions";
 import type { PosBank, PosSettings } from "./page";
@@ -25,7 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-type Method = "cash" | "qris" | "transfer";
+type Method = "cash" | "qris" | "transfer" | "gofood" | "shopeefood";
 const QUICK = [50000, 100000, 150000, 200000];
 
 export function PaymentDialog({
@@ -39,12 +39,14 @@ export function PaymentDialog({
   cashSessionId,
   customerName,
   note,
+  shipping,
   onCompleted,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   cart: CartItem[];
   totals: CartTotals;
+  shipping: number;
   settings: PosSettings;
   banks: PosBank[];
   isAdmin: boolean;
@@ -82,6 +84,7 @@ export function PaymentDialog({
         order_discount:
           totals.discountTotal -
           cart.reduce((s, c) => s + c.discount, 0), // sisa = diskon order
+        shipping_cost: shipping,
         customer_name: customerName,
         customer_phone: "",
         note,
@@ -115,6 +118,7 @@ export function PaymentDialog({
           }),
         })),
         totals,
+        shipping,
         payment: {
           method,
           bank: method === "transfer" ? bank : null,
@@ -161,6 +165,18 @@ export function PaymentDialog({
             onClick={() => setMethod("transfer")}
             icon={<Landmark className="size-4" />}
             label="Transfer"
+          />
+          <MethodButton
+            active={method === "gofood"}
+            onClick={() => setMethod("gofood")}
+            icon={<Bike className="size-4" />}
+            label="GoFood"
+          />
+          <MethodButton
+            active={method === "shopeefood"}
+            onClick={() => setMethod("shopeefood")}
+            icon={<ShoppingBag className="size-4" />}
+            label="ShopeeFood"
           />
         </div>
 
@@ -270,6 +286,33 @@ export function PaymentDialog({
                 id="ref-tf"
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* GoFood / ShopeeFood — konfirmasi seperti QRIS (masuk penjualan & struk) */}
+        {(method === "gofood" || method === "shopeefood") && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 rounded-md border p-3 text-sm">
+              {method === "gofood" ? (
+                <Bike className="size-5 text-primary" />
+              ) : (
+                <ShoppingBag className="size-5 text-primary" />
+              )}
+              <span>
+                Pesanan <b>{method === "gofood" ? "GoFood" : "ShopeeFood"}</b>{" "}
+                senilai {formatRupiah(total)}. Konfirmasi bila pembayaran dari
+                aplikasi sudah diterima.
+              </span>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="ref-online">No. order / referensi (opsional)</Label>
+              <Input
+                id="ref-online"
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+                placeholder="mis. no. pesanan GoFood/ShopeeFood"
               />
             </div>
           </div>

@@ -24,6 +24,8 @@ export type ShiftHistoryItem = {
   total_cash: number;
   total_qris: number;
   total_transfer: number;
+  total_gofood: number;
+  total_shopeefood: number;
 };
 
 export default async function ShiftsPage() {
@@ -68,6 +70,8 @@ export default async function ShiftsPage() {
       total_cash: h.total_cash,
       total_qris: h.total_qris,
       total_transfer: h.total_transfer,
+      total_gofood: h.total_gofood,
+      total_shopeefood: h.total_shopeefood,
     };
   });
 

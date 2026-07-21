@@ -61,6 +61,7 @@ export function PosClient({
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [orderDiscount, setOrderDiscount] = useState(0);
+  const [shipping, setShipping] = useState(0);
   const [customerName, setCustomerName] = useState("");
   const [note, setNote] = useState("");
   const [payOpen, setPayOpen] = useState(false);
@@ -156,6 +157,7 @@ export function PosClient({
   function resetSale() {
     setCart([]);
     setOrderDiscount(0);
+    setShipping(0);
     setCustomerName("");
     setNote("");
   }
@@ -410,13 +412,25 @@ export function PosClient({
           <div className="space-y-2 border-t p-3">
             <div className="grid gap-1.5">
               <div className="flex items-center gap-2">
-                <Label htmlFor="orderDisc" className="text-xs">
+                <Label htmlFor="orderDisc" className="w-24 text-xs">
                   Diskon total
                 </Label>
                 <RupiahInput
                   id="orderDisc"
                   value={orderDiscount}
                   onValueChange={setOrderDiscount}
+                  className="h-7 w-32 text-xs"
+                  placeholder="0"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="shipping" className="w-24 text-xs">
+                  Ongkos kirim
+                </Label>
+                <RupiahInput
+                  id="shipping"
+                  value={shipping}
+                  onValueChange={setShipping}
                   className="h-7 w-32 text-xs"
                   placeholder="0"
                 />
@@ -447,6 +461,12 @@ export function PosClient({
                 <span>Total</span>
                 <span>{formatRupiah(totals.grandTotal)}</span>
               </div>
+              {shipping > 0 && (
+                <p className="pt-0.5 text-[11px] text-muted-foreground">
+                  + Ongkos kirim {formatRupiah(shipping)} (dicatat terpisah, tidak
+                  masuk pendapatan)
+                </p>
+              )}
             </div>
 
             <div className="flex gap-2">
@@ -482,6 +502,7 @@ export function PosClient({
           cashSessionId={activeSessionId}
           customerName={customerName}
           note={note}
+          shipping={shipping}
           onCompleted={onCompleted}
         />
       )}

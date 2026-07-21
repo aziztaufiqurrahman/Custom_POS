@@ -184,6 +184,8 @@ function CloseShiftDialog({
             <Row label="Tunai" value={formatRupiah(breakdown.cash)} />
             <Row label="QRIS" value={formatRupiah(breakdown.qris)} />
             <Row label="Transfer" value={formatRupiah(breakdown.transfer)} />
+            <Row label="GoFood" value={formatRupiah(breakdown.gofood)} />
+            <Row label="ShopeeFood" value={formatRupiah(breakdown.shopeefood)} />
             <Row
               label="Total transaksi"
               value={formatRupiah(grandTotal(breakdown))}
@@ -254,6 +256,8 @@ function ActiveShiftCard({
             <Row label="Tunai" value={formatRupiah(breakdown.cash)} />
             <Row label="QRIS" value={formatRupiah(breakdown.qris)} />
             <Row label="Transfer" value={formatRupiah(breakdown.transfer)} />
+            <Row label="GoFood" value={formatRupiah(breakdown.gofood)} />
+            <Row label="ShopeeFood" value={formatRupiah(breakdown.shopeefood)} />
             <Row
               label={`Total (${breakdown.count} transaksi)`}
               value={formatRupiah(grandTotal(breakdown))}
@@ -325,10 +329,16 @@ function DetailDialog({
                 <Row label="— Transfer BSI" value={formatRupiah(breakdown.transferByBank.BSI)} />
               </div>
             ) : null}
+            <Row label="GoFood" value={formatRupiah(item.total_gofood)} />
+            <Row label="ShopeeFood" value={formatRupiah(item.total_shopeefood)} />
             <Row
               label="Total transaksi"
               value={formatRupiah(
-                item.total_cash + item.total_qris + item.total_transfer,
+                item.total_cash +
+                  item.total_qris +
+                  item.total_transfer +
+                  item.total_gofood +
+                  item.total_shopeefood,
               )}
               strong
             />
@@ -362,6 +372,8 @@ function exportCsv(history: ShiftHistoryItem[]) {
     "Tunai",
     "QRIS",
     "Transfer",
+    "GoFood",
+    "ShopeeFood",
     "Total Transaksi",
   ];
   const rows = history.map((h) => [
@@ -375,7 +387,13 @@ function exportCsv(history: ShiftHistoryItem[]) {
     h.total_cash,
     h.total_qris,
     h.total_transfer,
-    h.total_cash + h.total_qris + h.total_transfer,
+    h.total_gofood,
+    h.total_shopeefood,
+    h.total_cash +
+      h.total_qris +
+      h.total_transfer +
+      h.total_gofood +
+      h.total_shopeefood,
   ]);
   const csv = [header, ...rows]
     .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
@@ -467,7 +485,11 @@ export function ShiftsClient({
                       </TableCell>
                       <TableCell className="text-right">
                         {formatRupiah(
-                          h.total_cash + h.total_qris + h.total_transfer,
+                          h.total_cash +
+                            h.total_qris +
+                            h.total_transfer +
+                            h.total_gofood +
+                            h.total_shopeefood,
                         )}
                       </TableCell>
                       <TableCell>

@@ -87,6 +87,8 @@ export async function closeShift(raw: unknown): Promise<ShiftActionResult> {
       total_cash: b.cash,
       total_qris: b.qris,
       total_transfer: b.transfer,
+      total_gofood: b.gofood,
+      total_shopeefood: b.shopeefood,
       note: parsed.data.note || null,
     })
     .eq("id", session.id);

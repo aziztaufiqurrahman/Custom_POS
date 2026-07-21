@@ -29,13 +29,21 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
 export const BANKS = ["BNI", "BCA", "BSI"] as const;
 export type Bank = (typeof BANKS)[number];
 
-export const PAYMENT_METHODS = ["cash", "qris", "transfer"] as const;
+export const PAYMENT_METHODS = [
+  "cash",
+  "qris",
+  "transfer",
+  "gofood",
+  "shopeefood",
+] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: "Tunai",
   qris: "QRIS",
   transfer: "Transfer Bank",
+  gofood: "GoFood",
+  shopeefood: "ShopeeFood",
 };
 
 export const STOCK_MOVEMENT_TYPES = [

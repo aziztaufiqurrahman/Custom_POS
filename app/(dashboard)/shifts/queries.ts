@@ -35,6 +35,8 @@ export async function getSessionBreakdown(
   for (const p of pays ?? []) {
     if (p.method === "cash") result.cash += p.amount;
     else if (p.method === "qris") result.qris += p.amount;
+    else if (p.method === "gofood") result.gofood += p.amount;
+    else if (p.method === "shopeefood") result.shopeefood += p.amount;
     else if (p.method === "transfer") {
       result.transfer += p.amount;
       if (p.bank) result.transferByBank[p.bank as Bank] += p.amount;
