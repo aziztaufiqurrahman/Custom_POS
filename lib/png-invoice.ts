@@ -66,15 +66,15 @@ function wrap(ctx: Ctx, text: string, maxW: number): string[] {
 
 function watermark(ctx: Ctx, h: number) {
   ctx.save();
-  ctx.globalAlpha = 0.05;
+  ctx.globalAlpha = 0.04;
   ctx.fillStyle = COL.brown;
-  font(ctx, 700, 34);
+  font(ctx, 700, 30);
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
   ctx.translate(W / 2, h / 2);
   ctx.rotate((-28 * Math.PI) / 180);
-  for (let yy = -h; yy < h; yy += 120) {
-    for (let xx = -W; xx < W; xx += 300) {
+  for (let yy = -h; yy < h; yy += 150) {
+    for (let xx = -W - 120; xx < W; xx += 360) {
       ctx.fillText("Pudingkuu Lucky", xx, yy);
     }
   }
@@ -230,32 +230,45 @@ export async function downloadReceiptInvoicePng(inv: ReceiptInvoice): Promise<vo
       y += 8;
     }
 
-    y += 6;
+    y += 12;
 
-    // Ringkasan total (kanan).
-    const labelX = W - M - 150;
+    // Ringkasan total: dua kolom rata-kanan (label & nilai) dengan lebar nilai
+    // dihitung dinamis agar TIDAK pernah bertabrakan berapa pun nominalnya.
     const valX = W - M;
-    const totalRow = (label: string, value: string, opts?: { big?: boolean; bold?: boolean }) => {
-      font(ctx, opts?.bold || opts?.big ? 700 : 400, opts?.big ? 19 : 13);
+    const subRows: [string, string][] = [["Subtotal", formatRupiah(inv.subtotal)]];
+    if (inv.discount_total > 0) subRows.push(["Diskon", `-${formatRupiah(inv.discount_total)}`]);
+    if (inv.tax_total > 0) subRows.push(["Pajak", formatRupiah(inv.tax_total)]);
+    if (inv.shipping_cost > 0) subRows.push(["Ongkos kirim", formatRupiah(inv.shipping_cost)]);
+    const grandStr = formatRupiah(inv.grand_total);
+
+    // Lebar maksimum kolom nilai (termasuk TOTAL besar) → tentukan posisi label.
+    let maxValW = 0;
+    font(ctx, 400, 13);
+    for (const [, v] of subRows) maxValW = Math.max(maxValW, ctx.measureText(v).width);
+    font(ctx, 800, 20);
+    maxValW = Math.max(maxValW, ctx.measureText(grandStr).width);
+    const gap = 32;
+    const labelRightX = valX - maxValW - gap;
+
+    const totalRow = (label: string, value: string, big = false) => {
+      font(ctx, big ? 800 : 400, big ? 20 : 13);
       ctx.fillStyle = COL.ink;
-      ctx.textAlign = "left";
-      ctx.fillText(label, labelX, y);
       ctx.textAlign = "right";
+      ctx.fillText(label, labelRightX, y);
       ctx.fillText(value, valX, y);
-      y += opts?.big ? 30 : 22;
+      y += big ? 34 : 24;
     };
-    totalRow("Subtotal", formatRupiah(inv.subtotal));
-    if (inv.discount_total > 0) totalRow("Diskon", `-${formatRupiah(inv.discount_total)}`);
-    if (inv.tax_total > 0) totalRow("Pajak", formatRupiah(inv.tax_total));
-    if (inv.shipping_cost > 0) totalRow("Ongkos kirim", formatRupiah(inv.shipping_cost));
+    for (const [l, v] of subRows) totalRow(l, v);
+
+    // Garis pemisah sebelum TOTAL (menutupi kolom label + nilai).
     ctx.strokeStyle = COL.brown;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(labelX, y - 4);
-    ctx.lineTo(valX, y - 4);
+    ctx.moveTo(labelRightX - 96, y - 2);
+    ctx.lineTo(valX, y - 2);
     ctx.stroke();
-    y += 8;
-    totalRow("TOTAL", formatRupiah(inv.grand_total), { big: true });
+    y += 12;
+    totalRow("TOTAL", grandStr, true);
 
     // Badge status (Lunas) di bawah nominal.
     const bw = 96;
