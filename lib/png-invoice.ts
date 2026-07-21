@@ -67,7 +67,7 @@ function wrap(ctx: Ctx, text: string, maxW: number): string[] {
 
 function watermark(ctx: Ctx, h: number) {
   ctx.save();
-  ctx.globalAlpha = 0.04;
+  ctx.globalAlpha = 0.06;
   ctx.fillStyle = COL.brown;
   font(ctx, 700, 30);
   ctx.textAlign = "left";
@@ -261,14 +261,15 @@ export async function downloadReceiptInvoicePng(inv: ReceiptInvoice): Promise<vo
     };
     for (const [l, v] of subRows) totalRow(l, v);
 
-    // Garis pemisah sebelum TOTAL (menutupi kolom label + nilai).
+    // Garis pemisah sebelum TOTAL (beri jarak cukup agar tidak menyentuh teks).
+    y += 8;
     ctx.strokeStyle = COL.brown;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(labelRightX - 96, y - 2);
-    ctx.lineTo(valX, y - 2);
+    ctx.moveTo(labelRightX - 110, y);
+    ctx.lineTo(valX, y);
     ctx.stroke();
-    y += 12;
+    y += 30;
     totalRow("TOTAL", grandStr, true);
 
     // Badge status (Lunas) di bawah nominal.
