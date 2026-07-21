@@ -9,6 +9,7 @@ import type { ReceiptInvoice, ShiftInvoice } from "@/lib/invoice-actions";
 const W = 720; // lebar logis (px)
 const M = 48; // margin
 const S = 2; // skala retina
+const valR = W - M - 10; // tepi kanan bersama untuk semua nilai/angka (rata)
 
 const COL = {
   ink: "#2f241c",
@@ -148,12 +149,12 @@ export async function downloadReceiptInvoicePng(inv: ReceiptInvoice): Promise<vo
     ctx.textAlign = "right";
     ctx.fillStyle = COL.ink;
     font(ctx, 800, 30);
-    ctx.fillText("INVOICE", W - M, 56);
+    ctx.fillText("INVOICE", valR, 56);
     ctx.fillStyle = COL.muted;
     font(ctx, 400, 12);
-    ctx.fillText(`No: ${inv.code}`, W - M, 78);
-    ctx.fillText(formatTanggalWaktu(inv.created_at), W - M, 96);
-    ctx.fillText(`Status: ${STATUS_LABEL[inv.status]}`, W - M, 114);
+    ctx.fillText(`No: ${inv.code}`, valR, 78);
+    ctx.fillText(formatTanggalWaktu(inv.created_at), valR, 96);
+    ctx.fillText(`Status: ${STATUS_LABEL[inv.status]}`, valR, 114);
     const rightBottom = 120;
 
     y = Math.max(leftBottom, rightBottom) + 14;
@@ -172,7 +173,7 @@ export async function downloadReceiptInvoicePng(inv: ReceiptInvoice): Promise<vo
     ctx.fillText(`Kasir: ${inv.cashier_name}`, M, y);
     if (inv.customer_name) {
       ctx.textAlign = "right";
-      ctx.fillText(`Pelanggan: ${inv.customer_name}`, W - M, y);
+      ctx.fillText(`Pelanggan: ${inv.customer_name}`, valR, y);
     }
     y += 22;
 
@@ -234,7 +235,7 @@ export async function downloadReceiptInvoicePng(inv: ReceiptInvoice): Promise<vo
 
     // Ringkasan total: dua kolom rata-kanan (label & nilai) dengan lebar nilai
     // dihitung dinamis agar TIDAK pernah bertabrakan berapa pun nominalnya.
-    const valX = W - M;
+    const valX = valR;
     const subRows: [string, string][] = [["Subtotal", formatRupiah(inv.subtotal)]];
     if (inv.discount_total > 0) subRows.push(["Diskon", `-${formatRupiah(inv.discount_total)}`]);
     if (inv.tax_total > 0) subRows.push(["Pajak", formatRupiah(inv.tax_total)]);
@@ -299,14 +300,14 @@ export async function downloadReceiptInvoicePng(inv: ReceiptInvoice): Promise<vo
       ctx.textAlign = "left";
       ctx.fillText(label, M, y);
       ctx.textAlign = "right";
-      ctx.fillText(formatRupiah(p.cash_received ?? p.amount), W - M, y);
+      ctx.fillText(formatRupiah(p.cash_received ?? p.amount), valR, y);
       y += 20;
       if (p.method === "cash" && p.change_given != null) {
         ctx.fillStyle = COL.muted;
         ctx.textAlign = "left";
         ctx.fillText("Kembalian", M + 14, y);
         ctx.textAlign = "right";
-        ctx.fillText(formatRupiah(p.change_given), W - M, y);
+        ctx.fillText(formatRupiah(p.change_given), valR, y);
         y += 20;
       }
       if (p.reference) {
