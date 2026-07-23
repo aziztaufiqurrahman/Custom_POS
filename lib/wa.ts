@@ -34,6 +34,42 @@ export function waMeUrl(number: string, text: string): string {
   return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
 }
 
+/** Nama paket aplikasi WhatsApp di Android. */
+const WA_BUSINESS_PACKAGE = "com.whatsapp.w4b";
+
+/**
+ * Android intent URL yang MEMAKSA membuka WhatsApp Business (bukan personal).
+ * Bila Business belum terpasang, browser jatuh ke `browser_fallback_url`
+ * (wa.me) sehingga pesan tetap bisa dikirim.
+ * Hanya berlaku di Android (Chrome/Edge).
+ */
+export function waBusinessIntentUrl(number: string, text: string): string {
+  const encodedText = encodeURIComponent(text);
+  const fallback = encodeURIComponent(waMeUrl(number, text));
+  return (
+    `intent://send?phone=${number}&text=${encodedText}` +
+    `#Intent;scheme=whatsapp;package=${WA_BUSINESS_PACKAGE};` +
+    `S.browser_fallback_url=${fallback};end`
+  );
+}
+
+/** Deteksi perangkat Android (untuk memilih intent WhatsApp Business). */
+export function isAndroid(): boolean {
+  return (
+    typeof navigator !== "undefined" && /android/i.test(navigator.userAgent)
+  );
+}
+
+/**
+ * URL kirim WhatsApp terbaik untuk perangkat saat ini:
+ * di Android -> paksa WhatsApp Business; selain itu -> wa.me biasa.
+ */
+export function waSendUrl(number: string, text: string): string {
+  return isAndroid()
+    ? waBusinessIntentUrl(number, text)
+    : waMeUrl(number, text);
+}
+
 /** Susun pesan invoice yang rapi & profesional untuk dikirim ke konsumen. */
 export function buildInvoiceWaMessage(opts: {
   storeName: string;

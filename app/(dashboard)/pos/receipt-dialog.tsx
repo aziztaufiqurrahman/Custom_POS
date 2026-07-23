@@ -9,8 +9,9 @@ import { formatRupiah } from "@/lib/format";
 import { formatTanggalWaktu } from "@/lib/date";
 import {
   buildInvoiceWaMessage,
+  isAndroid,
   normalizeWaNumber,
-  waMeUrl,
+  waSendUrl,
 } from "@/lib/wa";
 import { DownloadInvoiceButton } from "@/components/domain/download-invoice-button";
 import { PrintReceiptButton } from "@/components/domain/print-receipt-button";
@@ -44,15 +45,19 @@ export function ReceiptDialog({
       toast.error("Nomor WhatsApp tidak valid. Periksa kembali nomornya.");
       return;
     }
-    const url = `${window.location.origin}/struk/${receipt.transaction_id}`;
+    const invoiceUrl = `${window.location.origin}/struk/${receipt.transaction_id}`;
     const msg = buildInvoiceWaMessage({
       storeName,
       code: receipt.code,
       total: formatRupiah(grandWithShipping),
-      url,
+      url: invoiceUrl,
       customerName: sale.customerName,
     });
-    window.open(waMeUrl(num, msg), "_blank");
+    const sendUrl = waSendUrl(num, msg);
+    // Android: intent:// harus dipicu via location agar diserahkan ke aplikasi
+    // WhatsApp Business (bukan membuka tab kosong). Desktop: buka tab baru.
+    if (isAndroid()) window.location.href = sendUrl;
+    else window.open(sendUrl, "_blank");
   }
 
   return (
