@@ -17,6 +17,7 @@ export type StoreSettingsData = {
   theme_preset: string;
   theme_primary: string | null;
   theme_radius: string;
+  theme_font: string;
 };
 
 export type BankData = {
@@ -56,6 +57,7 @@ export default async function SettingsPage() {
     theme_preset: settings?.theme_preset ?? "classic",
     theme_primary: settings?.theme_primary ?? null,
     theme_radius: settings?.theme_radius ?? "md",
+    theme_font: settings?.theme_font ?? "default",
   };
 
   return (

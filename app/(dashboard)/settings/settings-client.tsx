@@ -22,6 +22,7 @@ import {
   themeVars,
   type RadiusKey,
 } from "@/lib/themes";
+import { FONT_OPTIONS } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
 import { StoreImageUploader } from "@/components/domain/store-image-uploader";
 import { Button } from "@/components/ui/button";
@@ -85,12 +86,14 @@ function AppearanceCard({ store }: { store: StoreSettingsData }) {
   const [radius, setRadius] = useState<RadiusKey>(
     (store.theme_radius as RadiusKey) || "md",
   );
+  const [font, setFont] = useState(store.theme_font || "default");
 
   const activePrimary = useCustom && HEX_RE.test(primary) ? primary : null;
   const previewStyle = themeVars({
     presetKey,
     primary: activePrimary,
     radius,
+    font,
   }) as CSSProperties;
 
   function toggleCustom(on: boolean) {
@@ -104,6 +107,7 @@ function AppearanceCard({ store }: { store: StoreSettingsData }) {
         theme_preset: presetKey,
         theme_primary: useCustom ? primary : "",
         theme_radius: radius,
+        theme_font: font,
       });
       if (res.error) {
         toast.error(res.error);
@@ -207,7 +211,7 @@ function AppearanceCard({ store }: { store: StoreSettingsData }) {
                 value={primary}
                 onChange={(e) => setPrimary(e.target.value)}
                 placeholder="#9c6a44"
-                className="max-w-[140px] font-mono"
+                className="max-w-35 font-mono"
               />
               <span className="text-xs text-muted-foreground">
                 Warna tombol &amp; aksen brand.
@@ -220,6 +224,30 @@ function AppearanceCard({ store }: { store: StoreSettingsData }) {
               Anda sendiri.
             </p>
           )}
+        </div>
+
+        {/* Font */}
+        <div className="space-y-2">
+          <Label htmlFor="font">Font</Label>
+          <select
+            id="font"
+            value={font}
+            onChange={(e) => setFont(e.target.value)}
+            className="h-9 w-full rounded-md border bg-transparent px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {FONT_OPTIONS.map((f) => (
+              <option
+                key={f.key}
+                value={f.key}
+                style={f.cssVar ? { fontFamily: `var(${f.cssVar})` } : undefined}
+              >
+                {f.name} — {f.vibe}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">
+            Diterapkan ke seluruh teks aplikasi. Hanya font profesional.
+          </p>
         </div>
 
         {/* Sudut */}
@@ -243,7 +271,10 @@ function AppearanceCard({ store }: { store: StoreSettingsData }) {
         {/* Pratinjau langsung */}
         <div className="space-y-2">
           <Label>Pratinjau</Label>
-          <div style={previewStyle} className="rounded-xl border bg-background p-4">
+          <div
+            style={previewStyle}
+            className="rounded-xl border bg-background p-4 font-sans"
+          >
             <div className="rounded-lg border bg-card p-3 text-card-foreground shadow-sm">
               <p className="font-heading font-semibold">Pudingkuu Lucky</p>
               <p className="text-sm text-muted-foreground">

@@ -99,6 +99,7 @@ export async function updateThemeSettings(raw: unknown): Promise<SettingsResult>
       theme_preset: parsed.data.theme_preset,
       theme_primary: parsed.data.theme_primary || null,
       theme_radius: parsed.data.theme_radius,
+      theme_font: parsed.data.theme_font,
     })
     .eq("id", id);
   if (error) return { error: "Gagal menyimpan tampilan" };

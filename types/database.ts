@@ -591,6 +591,7 @@ export type Database = {
           tax_enabled: boolean
           tax_inclusive: boolean
           tax_percent: number
+          theme_font: string
           theme_preset: string
           theme_primary: string | null
           theme_radius: string
@@ -608,6 +609,7 @@ export type Database = {
           tax_enabled?: boolean
           tax_inclusive?: boolean
           tax_percent?: number
+          theme_font?: string
           theme_preset?: string
           theme_primary?: string | null
           theme_radius?: string
@@ -625,6 +627,7 @@ export type Database = {
           tax_enabled?: boolean
           tax_inclusive?: boolean
           tax_percent?: number
+          theme_font?: string
           theme_preset?: string
           theme_primary?: string | null
           theme_radius?: string

@@ -7,6 +7,8 @@
  * Modul murni (aman dipakai di server maupun klien).
  */
 
+import { fontFamily } from "@/lib/fonts";
+
 export type ThemeSpec = {
   key: string;
   name: string;
@@ -190,14 +192,17 @@ export function themeVars(opts: {
   presetKey?: string | null;
   primary?: string | null;
   radius?: string | null;
+  font?: string | null;
 }): Record<string, string> {
   const p = getPreset(opts.presetKey);
   const primary =
     opts.primary && HEX.test(opts.primary) ? opts.primary : p.primary;
   const primaryFg = contrastText(primary);
   const radius = RADIUS_VALUE[(opts.radius as RadiusKey) ?? "md"] ?? RADIUS_VALUE.md;
+  const family = fontFamily(opts.font);
 
   return {
+    ...(family ? { "--font-sans": family, "--font-heading": family } : {}),
     "--background": p.bg,
     "--foreground": p.fg,
     "--card": p.surface,

@@ -20,7 +20,7 @@ export default async function DashboardLayout({
   const supabase = await createClient();
   const { data: theme } = await supabase
     .from("store_settings")
-    .select("theme_preset, theme_primary, theme_radius")
+    .select("theme_preset, theme_primary, theme_radius, theme_font")
     .limit(1)
     .maybeSingle();
 
@@ -28,11 +28,15 @@ export default async function DashboardLayout({
     presetKey: theme?.theme_preset,
     primary: theme?.theme_primary,
     radius: theme?.theme_radius,
+    font: theme?.theme_font,
   }) as CSSProperties;
 
   return (
     <AuthProvider profile={profile}>
-      <div style={style} className="flex min-h-svh bg-background text-foreground">
+      <div
+        style={style}
+        className="flex min-h-svh bg-background font-sans text-foreground"
+      >
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar />

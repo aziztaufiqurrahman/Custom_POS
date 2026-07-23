@@ -46,5 +46,6 @@ export const themeSchema = z.object({
     .nullable()
     .or(z.literal("")),
   theme_radius: z.enum(["sharp", "md", "round"]),
+  theme_font: z.string().trim().min(1).max(40),
 });
 export type ThemeInput = z.infer<typeof themeSchema>;

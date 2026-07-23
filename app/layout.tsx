@@ -1,19 +1,8 @@
 import type { Metadata } from "next";
-import { Inter, Manrope } from "next/font/google";
 import "./globals.css";
 
+import { fontVariables } from "./fonts";
 import { Toaster } from "@/components/ui/sonner";
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
-
-const manrope = Manrope({
-  variable: "--font-manrope",
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
-});
 
 export const metadata: Metadata = {
   title: "Pudingkuu Lucky — POS",
@@ -27,7 +16,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id">
-      <body className={`${inter.variable} ${manrope.variable} antialiased`}>
+      <body className={`${fontVariables} antialiased`}>
         {children}
         <Toaster richColors position="top-center" />
       </body>
