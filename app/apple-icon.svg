@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Pudingkuu Lucky">
+  <rect width="64" height="64" rx="13" fill="#ffffff"/>
+  <g fill="none" stroke="#141414" stroke-width="2" stroke-linecap="square">
+    <path d="M12 16 H52 V48"/>
+    <path d="M12 16 V48"/>
+    <path d="M12 48 H25"/>
+    <path d="M39 48 H52"/>
+  </g>
+  <text x="32" y="33" text-anchor="middle" dominant-baseline="middle"
+        font-family="Georgia,'Times New Roman',serif" font-weight="600"
+        font-size="19" letter-spacing="1.5" fill="#141414">PL</text>
+</svg>
