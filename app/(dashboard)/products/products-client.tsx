@@ -271,7 +271,9 @@ export function ProductsClient({
                     )}
                   </div>
                   <div className="flex flex-1 flex-col gap-1 p-3">
-                    <p className="line-clamp-2 text-sm font-medium">{p.name}</p>
+                    <p className="line-clamp-2 min-h-10 text-sm font-medium">
+                      {p.name}
+                    </p>
                     <p className="text-xs text-muted-foreground">{p.sku}</p>
                     <p className="mt-1 font-semibold">
                       {formatRupiah(p.sell_price)}
@@ -283,7 +285,7 @@ export function ProductsClient({
                       <StockBadge p={p} />
                     </div>
                     {(canEdit || canDelete) && (
-                      <div className="mt-2 flex gap-1">
+                      <div className="mt-auto flex gap-1 pt-2">
                         {canEdit && (
                           <Button
                             variant="outline"
