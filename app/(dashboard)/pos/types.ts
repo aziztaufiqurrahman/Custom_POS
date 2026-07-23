@@ -31,5 +31,6 @@ export type CompletedSale = {
     reference: string;
   };
   customerName: string;
+  customerPhone: string;
   createdAt: string;
 };

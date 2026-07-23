@@ -1,11 +1,17 @@
 "use client";
 
-import { CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
+import { CheckCircle2, MessageCircle } from "lucide-react";
 
 import type { CompletedSale } from "./types";
 import { PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { formatRupiah } from "@/lib/format";
 import { formatTanggalWaktu } from "@/lib/date";
+import {
+  buildInvoiceWaMessage,
+  normalizeWaNumber,
+  waMeUrl,
+} from "@/lib/wa";
 import { DownloadInvoiceButton } from "@/components/domain/download-invoice-button";
 import { PrintReceiptButton } from "@/components/domain/print-receipt-button";
 import { Button } from "@/components/ui/button";
@@ -30,6 +36,24 @@ export function ReceiptDialog({
 }) {
   const { receipt, items, totals, payment } = sale;
   const grandWithShipping = totals.grandTotal + sale.shipping;
+  const hasPhone = sale.customerPhone.trim().length > 0;
+
+  function sendWhatsApp() {
+    const num = normalizeWaNumber(sale.customerPhone);
+    if (!num) {
+      toast.error("Nomor WhatsApp tidak valid. Periksa kembali nomornya.");
+      return;
+    }
+    const url = `${window.location.origin}/struk/${receipt.transaction_id}`;
+    const msg = buildInvoiceWaMessage({
+      storeName,
+      code: receipt.code,
+      total: formatRupiah(grandWithShipping),
+      url,
+      customerName: sale.customerName,
+    });
+    window.open(waMeUrl(num, msg), "_blank");
+  }
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -89,8 +113,17 @@ export function ReceiptDialog({
           </div>
         </div>
 
+        {hasPhone && (
+          <Button
+            onClick={sendWhatsApp}
+            className="w-full bg-[#25D366] text-white hover:bg-[#1ebe5b]"
+          >
+            <MessageCircle className="size-4" /> Kirim invoice ke WhatsApp
+          </Button>
+        )}
+
         <DialogFooter className="flex-row justify-between sm:justify-between">
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <PrintReceiptButton transactionId={receipt.transaction_id} />
             <DownloadInvoiceButton
               kind="receipt"

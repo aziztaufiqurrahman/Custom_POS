@@ -58,6 +58,7 @@ export function PaymentDialog({
   const [method, setMethod] = useState<Method>("cash");
   const [received, setReceived] = useState(0);
   const [reference, setReference] = useState("");
+  const [receiverPhone, setReceiverPhone] = useState("");
   const [bank, setBank] = useState<PosBank["bank"] | null>(banks[0]?.bank ?? null);
   const [qrisUrl, setQrisUrl] = useState(settings.qris_image_url);
   const [qrisZoom, setQrisZoom] = useState(false);
@@ -87,7 +88,7 @@ export function PaymentDialog({
           cart.reduce((s, c) => s + c.discount, 0), // sisa = diskon order
         shipping_cost: shipping,
         customer_name: customerName,
-        customer_phone: "",
+        customer_phone: receiverPhone.trim(),
         note,
         payment: {
           method,
@@ -127,6 +128,7 @@ export function PaymentDialog({
           reference,
         },
         customerName,
+        customerPhone: receiverPhone.trim(),
         createdAt: new Date().toISOString(),
       };
       toast.success("Pembayaran berhasil");
@@ -147,6 +149,19 @@ export function PaymentDialog({
             </span>
           </DialogDescription>
         </DialogHeader>
+
+        {/* Nomor penerima (opsional) — untuk kirim invoice via WhatsApp */}
+        <div className="grid gap-1.5">
+          <Label htmlFor="wa-phone">Nomor Penerima WhatsApp (opsional)</Label>
+          <Input
+            id="wa-phone"
+            type="tel"
+            inputMode="tel"
+            value={receiverPhone}
+            onChange={(e) => setReceiverPhone(e.target.value)}
+            placeholder="mis. 0812xxxxxxx — untuk kirim invoice"
+          />
+        </div>
 
         {/* Pilih metode */}
         <div className="grid grid-cols-3 gap-2">

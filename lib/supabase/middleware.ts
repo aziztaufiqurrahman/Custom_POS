@@ -22,7 +22,14 @@ export async function updateSession(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl;
-  const publicPrefixes = ["/login", "/forgot-password", "/reset-password", "/auth"];
+  // "/struk" = halaman invoice publik (dibuka konsumen via tautan WhatsApp).
+  const publicPrefixes = [
+    "/login",
+    "/forgot-password",
+    "/reset-password",
+    "/auth",
+    "/struk",
+  ];
   const isPublic =
     publicPrefixes.some((p) => pathname === p || pathname.startsWith(p + "/")) ||
     pathname.startsWith("/_next") ||
