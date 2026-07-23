@@ -14,6 +14,9 @@ export type StoreSettingsData = {
   tax_percent: number;
   tax_inclusive: boolean;
   trx_prefix: string;
+  theme_preset: string;
+  theme_primary: string | null;
+  theme_radius: string;
 };
 
 export type BankData = {
@@ -50,6 +53,9 @@ export default async function SettingsPage() {
     tax_percent: settings?.tax_percent ?? 11,
     tax_inclusive: settings?.tax_inclusive ?? false,
     trx_prefix: settings?.trx_prefix ?? "TRX",
+    theme_preset: settings?.theme_preset ?? "classic",
+    theme_primary: settings?.theme_primary ?? null,
+    theme_radius: settings?.theme_radius ?? "md",
   };
 
   return (

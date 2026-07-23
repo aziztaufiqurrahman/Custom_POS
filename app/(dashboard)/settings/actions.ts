@@ -11,6 +11,7 @@ import {
   categorySchema,
   storeProfileSchema,
   taxSchema,
+  themeSchema,
 } from "@/lib/validations/settings";
 
 export type SettingsResult = { error?: string; success?: boolean; id?: string };
@@ -80,6 +81,31 @@ export async function updateTaxSettings(raw: unknown): Promise<SettingsResult> {
   await logAudit({ action: "settings.tax_update", entity: "store_settings", entityId: id });
   revalidatePath("/settings");
   revalidatePath("/pos");
+  return { success: true };
+}
+
+export async function updateThemeSettings(raw: unknown): Promise<SettingsResult> {
+  if (!(await requireAdminSession())) return { error: "Hanya admin" };
+  const parsed = themeSchema.safeParse(raw);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Input tidak valid" };
+
+  const supabase = await createClient();
+  const id = await settingsRowId(supabase);
+  if (!id) return { error: "Pengaturan tidak ditemukan" };
+
+  const { error } = await supabase
+    .from("store_settings")
+    .update({
+      theme_preset: parsed.data.theme_preset,
+      theme_primary: parsed.data.theme_primary || null,
+      theme_radius: parsed.data.theme_radius,
+    })
+    .eq("id", id);
+  if (error) return { error: "Gagal menyimpan tampilan" };
+
+  await logAudit({ action: "settings.theme_update", entity: "store_settings", entityId: id });
+  // Tema ada di layout dashboard → segarkan seluruh area aplikasi.
+  revalidatePath("/", "layout");
   return { success: true };
 }
 

@@ -1,6 +1,3 @@
-// File ini di-generate dari skema Supabase (jangan diedit manual).
-// Regenerate: npx supabase gen types typescript --project-id <ref> > types/database.ts
-
 export type Json =
   | string
   | number
@@ -594,6 +591,9 @@ export type Database = {
           tax_enabled: boolean
           tax_inclusive: boolean
           tax_percent: number
+          theme_preset: string
+          theme_primary: string | null
+          theme_radius: string
           trx_prefix: string
           updated_at: string
         }
@@ -608,6 +608,9 @@ export type Database = {
           tax_enabled?: boolean
           tax_inclusive?: boolean
           tax_percent?: number
+          theme_preset?: string
+          theme_primary?: string | null
+          theme_radius?: string
           trx_prefix?: string
           updated_at?: string
         }
@@ -622,6 +625,9 @@ export type Database = {
           tax_enabled?: boolean
           tax_inclusive?: boolean
           tax_percent?: number
+          theme_preset?: string
+          theme_primary?: string | null
+          theme_radius?: string
           trx_prefix?: string
           updated_at?: string
         }

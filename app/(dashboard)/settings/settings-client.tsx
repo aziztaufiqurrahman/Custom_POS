@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, Palette, Pencil, Plus, Trash2 } from "lucide-react";
 
 import {
   createCategory,
@@ -12,8 +12,17 @@ import {
   saveBankAccount,
   updateStoreProfile,
   updateTaxSettings,
+  updateThemeSettings,
 } from "./actions";
 import type { BankData, CategoryData, StoreSettingsData } from "./page";
+import {
+  PRESETS,
+  RADIUS_OPTIONS,
+  getPreset,
+  themeVars,
+  type RadiusKey,
+} from "@/lib/themes";
+import { cn } from "@/lib/utils";
 import { StoreImageUploader } from "@/components/domain/store-image-uploader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,12 +62,209 @@ export function SettingsClient({
 }) {
   return (
     <div className="mx-auto max-w-3xl space-y-4">
+      <AppearanceCard store={store} />
       <ProfileCard store={store} />
       <QrisCard qris={store.qris_image_url} />
       <BankCard banks={banks} />
       <TaxCard store={store} />
       <CategoryCard categories={categories} />
     </div>
+  );
+}
+
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+
+function AppearanceCard({ store }: { store: StoreSettingsData }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [presetKey, setPresetKey] = useState(store.theme_preset || "classic");
+  const [useCustom, setUseCustom] = useState(!!store.theme_primary);
+  const [primary, setPrimary] = useState(
+    store.theme_primary ?? getPreset(store.theme_preset).primary,
+  );
+  const [radius, setRadius] = useState<RadiusKey>(
+    (store.theme_radius as RadiusKey) || "md",
+  );
+
+  const activePrimary = useCustom && HEX_RE.test(primary) ? primary : null;
+  const previewStyle = themeVars({
+    presetKey,
+    primary: activePrimary,
+    radius,
+  }) as CSSProperties;
+
+  function toggleCustom(on: boolean) {
+    setUseCustom(on);
+    if (on && !HEX_RE.test(primary)) setPrimary(getPreset(presetKey).primary);
+  }
+
+  function submit() {
+    start(async () => {
+      const res = await updateThemeSettings({
+        theme_preset: presetKey,
+        theme_primary: useCustom ? primary : "",
+        theme_radius: radius,
+      });
+      if (res.error) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success("Tampilan disimpan");
+      router.refresh();
+    });
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Palette className="size-5 text-primary" /> Tampilan &amp; Tema
+        </CardTitle>
+        <CardDescription>
+          Sesuaikan warna &amp; gaya kasir. Hanya mengubah tampilan — semua
+          fitur tetap sama.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {/* Template */}
+        <div className="space-y-2">
+          <Label>Template</Label>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {PRESETS.map((p) => {
+              const active = presetKey === p.key;
+              return (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => setPresetKey(p.key)}
+                  className={cn(
+                    "relative rounded-lg border p-2 text-left transition hover:border-primary/60",
+                    active && "border-primary ring-2 ring-primary",
+                  )}
+                >
+                  <div
+                    className="flex h-12 overflow-hidden rounded-md"
+                    style={{ background: p.bg }}
+                  >
+                    <div style={{ background: p.sidebar }} className="w-3" />
+                    <div className="flex flex-1 items-center gap-1.5 p-1.5">
+                      <span
+                        className="rounded px-1.5 py-0.5 text-[10px] font-bold"
+                        style={{
+                          background: p.primary,
+                          color: p.dark ? "#10131a" : "#fff",
+                        }}
+                      >
+                        Aa
+                      </span>
+                      <span
+                        className="h-4 flex-1 rounded"
+                        style={{
+                          background: p.surface,
+                          border: `1px solid ${p.border}`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <p className="mt-1.5 flex items-center gap-1 text-xs font-medium">
+                    {p.name}
+                    {p.dark && (
+                      <span className="rounded bg-muted px-1 text-[9px] text-muted-foreground">
+                        Gelap
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {p.description}
+                  </p>
+                  {active && (
+                    <span className="absolute right-1.5 top-1.5 flex size-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                      <Check className="size-3" />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Warna utama kustom */}
+        <div className="space-y-2 rounded-lg border p-3">
+          <label className="flex items-center justify-between">
+            <span className="text-sm font-medium">Warna utama kustom</span>
+            <Switch checked={useCustom} onCheckedChange={toggleCustom} />
+          </label>
+          {useCustom && (
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={HEX_RE.test(primary) ? primary : "#000000"}
+                onChange={(e) => setPrimary(e.target.value)}
+                className="size-10 shrink-0 cursor-pointer rounded-md border bg-transparent"
+                aria-label="Pilih warna utama"
+              />
+              <Input
+                value={primary}
+                onChange={(e) => setPrimary(e.target.value)}
+                placeholder="#9c6a44"
+                className="max-w-[140px] font-mono"
+              />
+              <span className="text-xs text-muted-foreground">
+                Warna tombol &amp; aksen brand.
+              </span>
+            </div>
+          )}
+          {!useCustom && (
+            <p className="text-xs text-muted-foreground">
+              Memakai warna bawaan template. Aktifkan untuk memakai warna brand
+              Anda sendiri.
+            </p>
+          )}
+        </div>
+
+        {/* Sudut */}
+        <div className="space-y-2">
+          <Label>Kelengkungan sudut</Label>
+          <div className="flex gap-2">
+            {RADIUS_OPTIONS.map((o) => (
+              <Button
+                key={o.key}
+                type="button"
+                size="sm"
+                variant={radius === o.key ? "default" : "outline"}
+                onClick={() => setRadius(o.key)}
+              >
+                {o.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* Pratinjau langsung */}
+        <div className="space-y-2">
+          <Label>Pratinjau</Label>
+          <div style={previewStyle} className="rounded-xl border bg-background p-4">
+            <div className="rounded-lg border bg-card p-3 text-card-foreground shadow-sm">
+              <p className="font-heading font-semibold">Pudingkuu Lucky</p>
+              <p className="text-sm text-muted-foreground">
+                Beginilah tampilan layar kasir.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Button size="sm">Bayar</Button>
+                <Button size="sm" variant="outline">
+                  Tahan
+                </Button>
+                <Badge>Baru</Badge>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <Button onClick={submit} disabled={pending}>
+          {pending ? "Menyimpan…" : "Simpan Tampilan"}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

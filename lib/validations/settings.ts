@@ -36,3 +36,15 @@ export const categorySchema = z.object({
   name: z.string().trim().min(1, "Nama kategori wajib diisi").max(60),
 });
 export type CategoryInput = z.infer<typeof categorySchema>;
+
+export const themeSchema = z.object({
+  theme_preset: z.string().trim().min(1).max(40),
+  // null / "" = pakai warna bawaan template; selain itu wajib hex #rrggbb.
+  theme_primary: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Warna harus format hex #rrggbb")
+    .nullable()
+    .or(z.literal("")),
+  theme_radius: z.enum(["sharp", "md", "round"]),
+});
+export type ThemeInput = z.infer<typeof themeSchema>;
