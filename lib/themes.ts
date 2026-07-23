@@ -202,7 +202,19 @@ export function themeVars(opts: {
   const family = fontFamily(opts.font);
 
   return {
-    ...(family ? { "--font-sans": family, "--font-heading": family } : {}),
+    // Tailwind v4 memakai `@theme inline`, sehingga utility .font-sans/.font-heading
+    // ter-compile menjadi var(--font-inter)/var(--font-manrope) — BUKAN
+    // var(--font-sans). Jadi override harus pada dua variabel itu agar font
+    // benar-benar berganti di seluruh aplikasi. (--font-sans/heading disetel juga
+    // untuk jaga-jaga bila token diubah ke non-inline di kemudian hari.)
+    ...(family
+      ? {
+          "--font-inter": family,
+          "--font-manrope": family,
+          "--font-sans": family,
+          "--font-heading": family,
+        }
+      : {}),
     "--background": p.bg,
     "--foreground": p.fg,
     "--card": p.surface,
@@ -236,4 +248,23 @@ export function themeVars(opts: {
     "--sidebar-ring": p.sidebarPrimary,
     "--radius": radius,
   };
+}
+
+/**
+ * CSS untuk menimpa token di `:root`. Dipakai lewat <style> pada layout
+ * dashboard sehingga tema berlaku menyeluruh — TERMASUK elemen yang di-portal
+ * (dropdown, dialog, toast) yang berada di luar pohon komponen dashboard.
+ * Hanya ter-render di area dashboard, jadi login/struk tetap default.
+ */
+export function themeCss(opts: {
+  presetKey?: string | null;
+  primary?: string | null;
+  radius?: string | null;
+  font?: string | null;
+}): string {
+  const vars = themeVars(opts);
+  const body = Object.entries(vars)
+    .map(([k, v]) => `${k}:${v}`)
+    .join(";");
+  return `:root{${body}}`;
 }
