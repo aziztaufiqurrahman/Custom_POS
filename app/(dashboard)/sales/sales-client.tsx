@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Ban, Download, Eye, Printer, Search, Undo2 } from "lucide-react";
+import { Ban, Download, Eye, Search, Undo2 } from "lucide-react";
 
 import {
   getSaleDetail,
@@ -17,6 +16,7 @@ import { PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { formatNumber, formatRupiah } from "@/lib/format";
 import { formatTanggalRingkas, formatTanggalWaktu } from "@/lib/date";
 import { DownloadInvoiceButton } from "@/components/domain/download-invoice-button";
+import { PrintReceiptButton } from "@/components/domain/print-receipt-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -481,14 +481,7 @@ function DetailDialog({
 
         <DialogFooter className="flex-row justify-between sm:justify-between">
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              render={
-                <Link href={`/print/receipt/${id}`} target="_blank">
-                  <Printer className="size-4" /> Cetak
-                </Link>
-              }
-            />
+            <PrintReceiptButton transactionId={id} />
             <DownloadInvoiceButton kind="receipt" transactionId={id} />
           </div>
           {detail?.status === "completed" && (

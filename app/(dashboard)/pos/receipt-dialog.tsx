@@ -1,13 +1,13 @@
 "use client";
 
-import Link from "next/link";
-import { CheckCircle2, Printer } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 
 import type { CompletedSale } from "./types";
 import { PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { formatRupiah } from "@/lib/format";
 import { formatTanggalWaktu } from "@/lib/date";
 import { DownloadInvoiceButton } from "@/components/domain/download-invoice-button";
+import { PrintReceiptButton } from "@/components/domain/print-receipt-button";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -91,14 +91,7 @@ export function ReceiptDialog({
 
         <DialogFooter className="flex-row justify-between sm:justify-between">
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              render={
-                <Link href={`/print/receipt/${receipt.transaction_id}`} target="_blank">
-                  <Printer className="size-4" /> Cetak
-                </Link>
-              }
-            />
+            <PrintReceiptButton transactionId={receipt.transaction_id} />
             <DownloadInvoiceButton
               kind="receipt"
               transactionId={receipt.transaction_id}
