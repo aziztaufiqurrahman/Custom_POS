@@ -6,6 +6,26 @@ pembayaran (Cash/QRIS/Transfer), rekonsiliasi kas per shift, rekap penjualan, da
 pendapatan. Spesifikasi lengkap ada di `PRD-POS-Kasir.md` — SELALU rujuk file itu sebagai
 sumber kebenaran fitur. Bila ada konflik antara permintaan ad-hoc dan PRD, konfirmasi dulu.
 
+## Transisi Multi-Cabang (PRD v2.0 — sedang dikerjakan)
+Proyek sedang bertransisi dari single-store ke **multi-cabang** mengikuti
+`PRD-POS-Multi-Cabang-v2.md` (roadmap 7 fase). Rencana teknis Fase 0 ada di
+`docs/fase-0-plan.md`. **Fase 0 (fondasi DB) SUDAH diterapkan** via migrasi
+`0015_multibranch_foundation.sql` — bersifat additive: skema lama tetap ada dan
+kode v1 masih aktif. Prinsip keras v2 yang WAJIB dipatuhi untuk kode baru:
+1. **Branch-scoped RLS**: data operasional melekat `branch_id`; akses ditegakkan via
+   helper `is_master_admin()`, `user_branch_ids()`, `has_branch_role()`, `has_branch_permission()`.
+2. **Immutability/append-only**: `stock_movements` & `audit_logs` sudah append-only + hash chain
+   (jangan pernah UPDATE/DELETE). `transactions` menyusul di Fase 4 (butuh RPC ditulis ulang +
+   model reversal; JANGAN aktifkan guard-nya sebelum itu).
+3. **Segregation of duties**: aksi sensitif lewat `approvals`; peminta ≠ penyetuju.
+4. **Server-side authority**: semua total dihitung di DB/server.
+5. **HPP tidak bocor ke kasir**: `products.base_cost_price` (baru) & `cost_price` (lama) tidak
+   pernah dikirim ke peran kasir (pakai `products_public` / seleksi kolom server).
+- Peran: `profiles.is_master_admin` (global) + `branch_memberships` (manager/cashier per cabang).
+  Kolom lama `profiles.role`/`permissions` masih dipakai kode v1 hingga migrasi peran (Fase 1).
+- Katalog global `products`; harga/stok per cabang `branch_products` (dipakai penuh mulai Fase 2).
+- Cabang Utama id tetap: `00000000-0000-0000-0000-0000000000c1`.
+
 ## Tech Stack (jangan ganti tanpa persetujuan)
 - Next.js 15 (App Router) + React Server Components sebagai default
 - TypeScript (strict mode, tanpa `any` kecuali sangat terpaksa + komentar alasan)
