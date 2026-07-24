@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getSession } from "@/lib/auth";
+import { getBranchContext } from "@/lib/branch";
 import { isAdmin } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
@@ -69,28 +70,28 @@ export async function createSale(raw: unknown): Promise<CreateSaleResult> {
   return { receipt };
 }
 
-/** Simpan URL gambar QRIS statis ke store_settings (admin saja). */
+/** Simpan URL gambar QRIS statis ke pengaturan cabang aktif (admin saja). */
 export async function saveQrisImage(
   url: string,
 ): Promise<{ error?: string; success?: boolean }> {
   const { profile } = await getSession();
   if (!isAdmin(profile)) return { error: "Hanya admin yang boleh mengubah QRIS" };
 
-  const supabase = await createClient();
-  const { data: row } = await supabase
-    .from("store_settings")
-    .select("id")
-    .limit(1)
-    .maybeSingle();
-  if (!row) return { error: "Pengaturan toko belum tersedia" };
+  const ctx = await getBranchContext();
+  if (!ctx.activeBranchId) return { error: "Cabang aktif tidak ditemukan" };
 
+  const supabase = await createClient();
   const { error } = await supabase
-    .from("store_settings")
+    .from("branch_settings")
     .update({ qris_image_url: url })
-    .eq("id", row.id);
+    .eq("branch_id", ctx.activeBranchId);
   if (error) return { error: "Gagal menyimpan QRIS" };
 
-  await logAudit({ action: "settings.qris_update", entity: "store_settings", entityId: row.id });
+  await logAudit({
+    action: "settings.qris_update",
+    entity: "branch_settings",
+    entityId: ctx.activeBranchId,
+  });
   revalidatePath("/pos");
   return { success: true };
 }

@@ -1,4 +1,5 @@
 import { requireAuth } from "@/lib/auth";
+import { getBranchContext } from "@/lib/branch";
 import { isAdmin as isAdminFn } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 
@@ -34,12 +35,15 @@ export type PosBank = {
 export default async function PosPage() {
   const { userId, profile } = await requireAuth();
   const supabase = await createClient();
+  const branchCtx = await getBranchContext();
+  const activeBranchId = branchCtx.activeBranchId;
 
   const [
     { data: active },
     { data: products },
     { data: categories },
-    { data: settings },
+    { data: store },
+    { data: branchSettings },
     { data: banks },
   ] = await Promise.all([
     supabase
@@ -57,18 +61,25 @@ export default async function PosPage() {
       .eq("is_active", true)
       .order("name"),
     supabase.from("categories").select("id, name").order("name"),
-    supabase
-      .from("store_settings")
-      .select(
-        "store_name, tax_enabled, tax_percent, tax_inclusive, qris_image_url",
-      )
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("bank_accounts")
-      .select("bank, account_number, account_name")
-      .eq("is_active", true)
-      .order("bank"),
+    // Identitas toko (brand) tetap global.
+    supabase.from("store_settings").select("store_name").limit(1).maybeSingle(),
+    // Pengaturan POS per cabang aktif (pajak & QRIS).
+    activeBranchId
+      ? supabase
+          .from("branch_settings")
+          .select("tax_enabled, tax_percent, tax_inclusive, qris_image_url")
+          .eq("branch_id", activeBranchId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    // Rekening bank cabang aktif.
+    activeBranchId
+      ? supabase
+          .from("bank_accounts")
+          .select("bank, account_number, account_name")
+          .eq("branch_id", activeBranchId)
+          .eq("is_active", true)
+          .order("bank")
+      : Promise.resolve({ data: [] }),
   ]);
 
   const posProducts: PosProduct[] = (products ?? []).map((p) => ({
@@ -85,11 +96,11 @@ export default async function PosPage() {
   }));
 
   const posSettings: PosSettings = {
-    store_name: settings?.store_name ?? "Toko",
-    tax_enabled: settings?.tax_enabled ?? false,
-    tax_percent: settings?.tax_percent ?? 0,
-    tax_inclusive: settings?.tax_inclusive ?? false,
-    qris_image_url: settings?.qris_image_url ?? null,
+    store_name: store?.store_name ?? "Toko",
+    tax_enabled: branchSettings?.tax_enabled ?? false,
+    tax_percent: branchSettings?.tax_percent ?? 0,
+    tax_inclusive: branchSettings?.tax_inclusive ?? false,
+    qris_image_url: branchSettings?.qris_image_url ?? null,
   };
 
   return (

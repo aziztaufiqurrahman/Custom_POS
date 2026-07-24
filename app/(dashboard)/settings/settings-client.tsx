@@ -3,18 +3,23 @@
 import { useState, useTransition, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, Palette, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, Palette, Pencil, Plus, Store, Trash2 } from "lucide-react";
 
 import {
   createCategory,
   deleteCategory,
   renameCategory,
   saveBankAccount,
+  updateBranchPos,
   updateStoreProfile,
-  updateTaxSettings,
   updateThemeSettings,
 } from "./actions";
-import type { BankData, CategoryData, StoreSettingsData } from "./page";
+import type {
+  BankData,
+  BranchPosData,
+  CategoryData,
+  StoreSettingsData,
+} from "./page";
 import {
   PRESETS,
   RADIUS_OPTIONS,
@@ -54,21 +59,33 @@ import {
 
 export function SettingsClient({
   store,
+  branchPos,
   banks,
   categories,
 }: {
   store: StoreSettingsData;
+  branchPos: BranchPosData;
   banks: BankData[];
   categories: CategoryData[];
 }) {
+  const branchName = branchPos.branch_name ?? "Cabang aktif";
   return (
     <div className="mx-auto max-w-3xl space-y-4">
+      {/* Global (brand & tampilan) */}
       <AppearanceCard store={store} />
       <ProfileCard store={store} />
-      <QrisCard qris={store.qris_image_url} />
-      <BankCard banks={banks} />
-      <TaxCard store={store} />
       <CategoryCard categories={categories} />
+
+      {/* Per cabang aktif */}
+      <div className="flex items-center gap-2 pt-2">
+        <Store className="size-4 text-primary" />
+        <h2 className="text-sm font-semibold text-muted-foreground">
+          Pengaturan POS Cabang — <span className="text-foreground">{branchName}</span>
+        </h2>
+      </div>
+      <BranchPosCard branchPos={branchPos} />
+      <QrisCard qris={branchPos.qris_image_url} branchName={branchName} />
+      <BankCard banks={banks} branchName={branchName} />
     </div>
   );
 }
@@ -308,7 +325,6 @@ function ProfileCard({ store }: { store: StoreSettingsData }) {
     address: store.address ?? "",
     phone: store.phone ?? "",
     receipt_footer: store.receipt_footer ?? "",
-    trx_prefix: store.trx_prefix,
   });
 
   function submit() {
@@ -344,24 +360,13 @@ function ProfileCard({ store }: { store: StoreSettingsData }) {
             Boleh beberapa baris (tekan Enter). Semua baris tampil di struk.
           </p>
         </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div className="grid gap-2">
-            <Label htmlFor="ph">No. HP</Label>
-            <Input
-              id="ph"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="pfx">Prefix No. Transaksi</Label>
-            <Input
-              id="pfx"
-              value={form.trx_prefix}
-              onChange={(e) => setForm({ ...form, trx_prefix: e.target.value })}
-              placeholder="TRX"
-            />
-          </div>
+        <div className="grid gap-2">
+          <Label htmlFor="ph">No. HP</Label>
+          <Input
+            id="ph"
+            value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+          />
         </div>
         <div className="grid gap-2">
           <Label htmlFor="addr">Alamat</Label>
@@ -393,14 +398,14 @@ function ProfileCard({ store }: { store: StoreSettingsData }) {
   );
 }
 
-function QrisCard({ qris }: { qris: string | null }) {
+function QrisCard({ qris, branchName }: { qris: string | null; branchName: string }) {
   const [url, setUrl] = useState(qris);
   return (
     <Card>
       <CardHeader>
         <CardTitle>QRIS</CardTitle>
         <CardDescription>
-          Gambar QRIS statis yang ditampilkan saat pembayaran QRIS di kasir.
+          Gambar QRIS statis untuk pembayaran QRIS di kasir — cabang {branchName}.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -410,7 +415,7 @@ function QrisCard({ qris }: { qris: string | null }) {
   );
 }
 
-function BankCard({ banks }: { banks: BankData[] }) {
+function BankCard({ banks, branchName }: { banks: BankData[]; branchName: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [rows, setRows] = useState(banks);
@@ -432,7 +437,7 @@ function BankCard({ banks }: { banks: BankData[] }) {
       <CardHeader>
         <CardTitle>Rekening Bank</CardTitle>
         <CardDescription>
-          Ditampilkan saat pembayaran Transfer (BNI/BCA/BSI).
+          Ditampilkan saat pembayaran Transfer (BNI/BCA/BSI) — cabang {branchName}.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -480,22 +485,27 @@ function BankCard({ banks }: { banks: BankData[] }) {
   );
 }
 
-function TaxCard({ store }: { store: StoreSettingsData }) {
+function BranchPosCard({ branchPos }: { branchPos: BranchPosData }) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const [enabled, setEnabled] = useState(store.tax_enabled);
-  const [percent, setPercent] = useState(String(store.tax_percent));
-  const [inclusive, setInclusive] = useState(store.tax_inclusive);
+  const [prefix, setPrefix] = useState(branchPos.trx_prefix);
+  const [enabled, setEnabled] = useState(branchPos.tax_enabled);
+  const [percent, setPercent] = useState(String(branchPos.tax_percent));
+  const [inclusive, setInclusive] = useState(branchPos.tax_inclusive);
 
   function submit() {
     start(async () => {
-      const res = await updateTaxSettings({
+      const res = await updateBranchPos({
         tax_enabled: enabled,
         tax_percent: Number(percent) || 0,
         tax_inclusive: inclusive,
+        trx_prefix: prefix,
       });
-      if (res.error) { toast.error(res.error); return; }
-      toast.success("Pengaturan pajak disimpan");
+      if (res.error) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success("Pengaturan POS cabang disimpan");
       router.refresh();
     });
   }
@@ -503,10 +513,24 @@ function TaxCard({ store }: { store: StoreSettingsData }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Pajak (PPN)</CardTitle>
-        <CardDescription>Default non-aktif. Aktifkan bila perlu.</CardDescription>
+        <CardTitle>Pajak &amp; Nomor Transaksi</CardTitle>
+        <CardDescription>
+          PPN default non-aktif. Prefix dipakai pada kode struk cabang ini.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        <div className="grid gap-1.5">
+          <Label htmlFor="pfx" className="text-xs">
+            Prefix No. Transaksi
+          </Label>
+          <Input
+            id="pfx"
+            value={prefix}
+            onChange={(e) => setPrefix(e.target.value)}
+            placeholder="TRX"
+            className="max-w-40"
+          />
+        </div>
         <label className="flex items-center justify-between rounded-md border p-3">
           <span className="text-sm font-medium">Aktifkan PPN</span>
           <Switch checked={enabled} onCheckedChange={setEnabled} />
@@ -533,7 +557,7 @@ function TaxCard({ store }: { store: StoreSettingsData }) {
           </label>
         </div>
         <Button onClick={submit} disabled={pending}>
-          {pending ? "Menyimpan…" : "Simpan Pajak"}
+          {pending ? "Menyimpan…" : "Simpan"}
         </Button>
       </CardContent>
     </Card>

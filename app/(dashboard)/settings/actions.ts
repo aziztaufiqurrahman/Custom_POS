@@ -3,14 +3,15 @@
 import { revalidatePath } from "next/cache";
 
 import { getSession } from "@/lib/auth";
+import { getBranchContext } from "@/lib/branch";
 import { isAdmin } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 import {
   bankAccountSchema,
+  branchPosSchema,
   categorySchema,
   storeProfileSchema,
-  taxSchema,
   themeSchema,
 } from "@/lib/validations/settings";
 
@@ -33,6 +34,12 @@ async function settingsRowId(
   return data?.id ?? null;
 }
 
+/** Cabang aktif untuk pengaturan per-cabang. */
+async function activeBranchId(): Promise<string | null> {
+  const ctx = await getBranchContext();
+  return ctx.activeBranchId;
+}
+
 export async function updateStoreProfile(raw: unknown): Promise<SettingsResult> {
   if (!(await requireAdminSession())) return { error: "Hanya admin" };
   const parsed = storeProfileSchema.safeParse(raw);
@@ -49,7 +56,6 @@ export async function updateStoreProfile(raw: unknown): Promise<SettingsResult> 
       address: parsed.data.address || null,
       phone: parsed.data.phone || null,
       receipt_footer: parsed.data.receipt_footer || null,
-      trx_prefix: parsed.data.trx_prefix.toUpperCase(),
     })
     .eq("id", id);
   if (error) return { error: "Gagal menyimpan profil toko" };
@@ -59,26 +65,27 @@ export async function updateStoreProfile(raw: unknown): Promise<SettingsResult> 
   return { success: true };
 }
 
-export async function updateTaxSettings(raw: unknown): Promise<SettingsResult> {
+export async function updateBranchPos(raw: unknown): Promise<SettingsResult> {
   if (!(await requireAdminSession())) return { error: "Hanya admin" };
-  const parsed = taxSchema.safeParse(raw);
+  const parsed = branchPosSchema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Input tidak valid" };
 
-  const supabase = await createClient();
-  const id = await settingsRowId(supabase);
-  if (!id) return { error: "Pengaturan tidak ditemukan" };
+  const branchId = await activeBranchId();
+  if (!branchId) return { error: "Cabang aktif tidak ditemukan" };
 
+  const supabase = await createClient();
   const { error } = await supabase
-    .from("store_settings")
+    .from("branch_settings")
     .update({
       tax_enabled: parsed.data.tax_enabled,
       tax_percent: parsed.data.tax_percent,
       tax_inclusive: parsed.data.tax_inclusive,
+      trx_prefix: parsed.data.trx_prefix.toUpperCase(),
     })
-    .eq("id", id);
-  if (error) return { error: "Gagal menyimpan pengaturan pajak" };
+    .eq("branch_id", branchId);
+  if (error) return { error: "Gagal menyimpan pengaturan POS cabang" };
 
-  await logAudit({ action: "settings.tax_update", entity: "store_settings", entityId: id });
+  await logAudit({ action: "settings.branch_pos_update", entity: "branch_settings", entityId: branchId });
   revalidatePath("/settings");
   revalidatePath("/pos");
   return { success: true };
@@ -116,16 +123,26 @@ export async function setStoreImage(
 ): Promise<SettingsResult> {
   if (!(await requireAdminSession())) return { error: "Hanya admin" };
   const supabase = await createClient();
-  const id = await settingsRowId(supabase);
-  if (!id) return { error: "Pengaturan tidak ditemukan" };
 
-  const patch =
-    kind === "logo" ? { logo_url: url } : { qris_image_url: url };
-  const { error } = await supabase
-    .from("store_settings")
-    .update(patch)
-    .eq("id", id);
-  if (error) return { error: "Gagal menyimpan gambar" };
+  if (kind === "logo") {
+    // Logo = identitas brand global (store_settings).
+    const id = await settingsRowId(supabase);
+    if (!id) return { error: "Pengaturan tidak ditemukan" };
+    const { error } = await supabase
+      .from("store_settings")
+      .update({ logo_url: url })
+      .eq("id", id);
+    if (error) return { error: "Gagal menyimpan gambar" };
+  } else {
+    // QRIS = per cabang aktif (branch_settings).
+    const branchId = await activeBranchId();
+    if (!branchId) return { error: "Cabang aktif tidak ditemukan" };
+    const { error } = await supabase
+      .from("branch_settings")
+      .update({ qris_image_url: url })
+      .eq("branch_id", branchId);
+    if (error) return { error: "Gagal menyimpan gambar" };
+  }
 
   revalidatePath("/settings");
   revalidatePath("/pos");
@@ -138,15 +155,23 @@ export async function saveBankAccount(raw: unknown): Promise<SettingsResult> {
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Input tidak valid" };
   const d = parsed.data;
 
+  const branchId = await activeBranchId();
+  if (!branchId) return { error: "Cabang aktif tidak ditemukan" };
+
   const supabase = await createClient();
+  // Upsert per (cabang, bank): cabang baru mungkin belum punya baris rekening.
   const { error } = await supabase
     .from("bank_accounts")
-    .update({
-      account_number: d.account_number,
-      account_name: d.account_name,
-      is_active: d.is_active,
-    })
-    .eq("bank", d.bank);
+    .upsert(
+      {
+        branch_id: branchId,
+        bank: d.bank,
+        account_number: d.account_number,
+        account_name: d.account_name,
+        is_active: d.is_active,
+      },
+      { onConflict: "branch_id,bank" },
+    );
   if (error) return { error: "Gagal menyimpan rekening" };
 
   await logAudit({ action: "settings.bank_update", entity: "bank_accounts", metadata: { bank: d.bank } });

@@ -137,6 +137,7 @@ export type Database = {
           account_name: string
           account_number: string
           bank: Database["public"]["Enums"]["bank_code"]
+          branch_id: string
           created_at: string
           id: string
           is_active: boolean
@@ -146,6 +147,7 @@ export type Database = {
           account_name?: string
           account_number?: string
           bank: Database["public"]["Enums"]["bank_code"]
+          branch_id?: string
           created_at?: string
           id?: string
           is_active?: boolean
@@ -155,12 +157,21 @@ export type Database = {
           account_name?: string
           account_number?: string
           bank?: Database["public"]["Enums"]["bank_code"]
+          branch_id?: string
           created_at?: string
           id?: string
           is_active?: boolean
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bank_accounts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       branch_memberships: {
         Row: {
