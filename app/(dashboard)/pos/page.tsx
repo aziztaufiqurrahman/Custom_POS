@@ -52,14 +52,18 @@ export default async function PosPage() {
       .eq("cashier_id", userId)
       .eq("status", "open")
       .maybeSingle(),
-    supabase
-      .from("products_public")
-      .select(
-        "id, name, sku, barcode, sell_price, is_taxable, stock, unit, image_url, category_id",
-      )
-      .is("deleted_at", null)
-      .eq("is_active", true)
-      .order("name"),
+    // Katalog per cabang aktif (harga & stok dari branch_products).
+    activeBranchId
+      ? supabase
+          .from("branch_products_public")
+          .select(
+            "product_id, name, sku, barcode, price, is_taxable, stock, unit, image_url, category_id",
+          )
+          .eq("branch_id", activeBranchId)
+          .eq("is_active", true)
+          .is("deleted_at", null)
+          .order("name")
+      : Promise.resolve({ data: [] }),
     supabase.from("categories").select("id, name").order("name"),
     // Identitas toko (brand) tetap global.
     supabase.from("store_settings").select("store_name").limit(1).maybeSingle(),
@@ -83,11 +87,11 @@ export default async function PosPage() {
   ]);
 
   const posProducts: PosProduct[] = (products ?? []).map((p) => ({
-    id: p.id!,
+    id: p.product_id!,
     name: p.name!,
     sku: p.sku!,
     barcode: p.barcode ?? null,
-    sell_price: p.sell_price!,
+    sell_price: p.price!,
     is_taxable: p.is_taxable!,
     stock: p.stock!,
     unit: p.unit!,

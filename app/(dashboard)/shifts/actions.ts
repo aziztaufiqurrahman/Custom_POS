@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getSession } from "@/lib/auth";
+import { getBranchContext } from "@/lib/branch";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 import { computeReconciliation, type PaymentBreakdown } from "@/lib/shift";
@@ -25,11 +26,15 @@ export async function openShift(raw: unknown): Promise<ShiftActionResult> {
     return { error: parsed.error.issues[0]?.message ?? "Input tidak valid" };
   }
 
+  const ctx = await getBranchContext();
+  if (!ctx.activeBranchId) return { error: "Cabang aktif tidak ditemukan" };
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("cash_sessions")
     .insert({
       cashier_id: userId,
+      branch_id: ctx.activeBranchId,
       opening_balance: parsed.data.opening_balance,
       status: "open",
     })

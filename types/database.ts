@@ -1669,6 +1669,55 @@ export type Database = {
       }
     }
     Views: {
+      branch_products_public: {
+        Row: {
+          barcode: string | null
+          branch_id: string | null
+          category_id: string | null
+          deleted_at: string | null
+          id: string | null
+          image_url: string | null
+          is_active: boolean | null
+          is_taxable: boolean | null
+          min_stock: number | null
+          name: string | null
+          price: number | null
+          product_id: string | null
+          sku: string | null
+          stock: number | null
+          unit: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_products_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products_public: {
         Row: {
           barcode: string | null
@@ -1749,7 +1798,12 @@ export type Database = {
     }
     Functions: {
       adjust_stock: {
-        Args: { p_new_qty: number; p_note?: string; p_product_id: string }
+        Args: {
+          p_branch_id?: string
+          p_new_qty: number
+          p_note?: string
+          p_product_id: string
+        }
         Returns: Json
       }
       complete_opname: {
@@ -1791,6 +1845,7 @@ export type Database = {
       }
       restock_product: {
         Args: {
+          p_branch_id?: string
           p_new_cost?: number
           p_note?: string
           p_product_id: string
