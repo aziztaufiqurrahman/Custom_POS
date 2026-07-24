@@ -52,13 +52,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -119,18 +112,18 @@ function BranchSelectField({
   return (
     <div className="grid gap-2">
       <Label>Cabang</Label>
-      <Select value={value} onValueChange={(v) => onChange(v ?? "")}>
-        <SelectTrigger>
-          <SelectValue placeholder="Pilih cabang" />
-        </SelectTrigger>
-        <SelectContent>
-          {branches.map((b) => (
-            <SelectItem key={b.id} value={b.id}>
-              {b.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-9 w-full rounded-md border bg-transparent px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <option value="">Pilih cabang…</option>
+        {branches.map((b) => (
+          <option key={b.id} value={b.id}>
+            {b.name}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
@@ -217,15 +210,14 @@ function AddEmployeeDialog({
               control={form.control}
               name="role"
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="kasir">Kasir</SelectItem>
-                    <SelectItem value="admin">Manajer</SelectItem>
-                  </SelectContent>
-                </Select>
+                <select
+                  value={field.value}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  className="h-9 w-full rounded-md border bg-transparent px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="kasir">Kasir</option>
+                  <option value="admin">Manajer</option>
+                </select>
               )}
             />
           </div>
@@ -327,15 +319,14 @@ function EditEmployeeDialog({
               control={form.control}
               name="role"
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="kasir">Kasir</SelectItem>
-                    <SelectItem value="admin">Manajer</SelectItem>
-                  </SelectContent>
-                </Select>
+                <select
+                  value={field.value}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  className="h-9 w-full rounded-md border bg-transparent px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="kasir">Kasir</option>
+                  <option value="admin">Manajer</option>
+                </select>
               )}
             />
           </div>

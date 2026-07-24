@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
@@ -89,6 +90,7 @@ export function SalesClient({
   const [f, setF] = useState<SalesFilters>(filters);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [action, setAction] = useState<{ row: SaleRow; kind: "void" | "refund" } | null>(null);
+  const pg = usePagination(rows, 20);
 
   useEffect(() => setF(filters), [filters]);
 
@@ -319,7 +321,7 @@ export function SalesClient({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rows.map((r) => (
+                  {pg.pageItems.map((r) => (
                     <TableRow key={r.id}>
                       <TableCell className="font-medium">{r.code}</TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground">
@@ -352,6 +354,15 @@ export function SalesClient({
               </Table>
             </div>
           )}
+          <Pagination
+            page={pg.page}
+            totalPages={pg.totalPages}
+            from={pg.from}
+            to={pg.to}
+            total={pg.total}
+            onPage={pg.setPage}
+            unit="transaksi"
+          />
         </CardContent>
       </Card>
 

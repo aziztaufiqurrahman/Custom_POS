@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
   Card,
   CardContent,
@@ -106,6 +107,9 @@ export function ReportsClient({ data }: { data: ReportData }) {
     name: PAYMENT_METHOD_LABELS[k as keyof typeof PAYMENT_METHOD_LABELS] ?? k,
     value: v,
   }));
+
+  const txPg = usePagination(data.transactions, 15);
+  const ledPg = usePagination(data.ledger, 15);
 
   return (
     <div className="space-y-4">
@@ -277,7 +281,7 @@ export function ReportsClient({ data }: { data: ReportData }) {
                 </tr>
               </thead>
               <tbody>
-                {data.transactions.map((t, i) => (
+                {txPg.pageItems.map((t, i) => (
                   <tr key={i} className="border-t">
                     <td className="py-1.5 pr-2 font-mono text-xs">{t.code}</td>
                     <td className="py-1.5 pr-2 text-xs">{formatTanggalRingkas(t.created_at)}</td>
@@ -293,6 +297,15 @@ export function ReportsClient({ data }: { data: ReportData }) {
               </tbody>
             </table>
           </div>
+          <Pagination
+            page={txPg.page}
+            totalPages={txPg.totalPages}
+            from={txPg.from}
+            to={txPg.to}
+            total={txPg.total}
+            onPage={txPg.setPage}
+            unit="transaksi"
+          />
         </CardContent>
       </Card>
 
@@ -317,7 +330,7 @@ export function ReportsClient({ data }: { data: ReportData }) {
                 </tr>
               </thead>
               <tbody>
-                {data.ledger.map((l, i) => (
+                {ledPg.pageItems.map((l, i) => (
                   <tr key={i} className="border-t">
                     <td className="py-1.5 pr-2 text-xs">{formatTanggalRingkas(l.created_at)}</td>
                     <td className="py-1.5 pr-2">{l.product_name}</td>
@@ -337,6 +350,15 @@ export function ReportsClient({ data }: { data: ReportData }) {
               </tbody>
             </table>
           </div>
+          <Pagination
+            page={ledPg.page}
+            totalPages={ledPg.totalPages}
+            from={ledPg.from}
+            to={ledPg.to}
+            total={ledPg.total}
+            onPage={ledPg.setPage}
+            unit="baris"
+          />
         </CardContent>
       </Card>
     </div>

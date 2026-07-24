@@ -74,24 +74,58 @@ export function SettingsClient({
   alertWhatsapp?: string;
 }) {
   const branchName = branchPos.branch_name ?? "Cabang aktif";
+  const [tab, setTab] = useState<"tampilan" | "toko" | "kategori" | "cabang">(
+    "tampilan",
+  );
+
+  const TABS = [
+    { key: "tampilan", label: "Tampilan" },
+    { key: "toko", label: "Toko & Brand" },
+    { key: "kategori", label: "Kategori" },
+    { key: "cabang", label: `POS Cabang (${branchName})` },
+  ] as const;
+
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      {/* Global (brand & tampilan) */}
-      <AppearanceCard store={store} />
-      <ProfileCard store={store} />
-      {isMasterAdmin && <AlertCard alertWhatsapp={alertWhatsapp} />}
-      <CategoryCard categories={categories} />
-
-      {/* Per cabang aktif */}
-      <div className="flex items-center gap-2 pt-2">
-        <Store className="size-4 text-primary" />
-        <h2 className="text-sm font-semibold text-muted-foreground">
-          Pengaturan POS Cabang — <span className="text-foreground">{branchName}</span>
-        </h2>
+      {/* Tab seksi — hindari scroll panjang */}
+      <div className="flex flex-wrap gap-2">
+        {TABS.map((t) => (
+          <Button
+            key={t.key}
+            variant={tab === t.key ? "default" : "outline"}
+            size="sm"
+            onClick={() => setTab(t.key)}
+          >
+            {t.label}
+          </Button>
+        ))}
       </div>
-      <BranchPosCard branchPos={branchPos} />
-      <QrisCard qris={branchPos.qris_image_url} branchName={branchName} />
-      <BankCard banks={banks} branchName={branchName} />
+
+      {tab === "tampilan" && <AppearanceCard store={store} />}
+
+      {tab === "toko" && (
+        <div className="space-y-4">
+          <ProfileCard store={store} />
+          {isMasterAdmin && <AlertCard alertWhatsapp={alertWhatsapp} />}
+        </div>
+      )}
+
+      {tab === "kategori" && <CategoryCard categories={categories} />}
+
+      {tab === "cabang" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Store className="size-4 text-primary" />
+            <h2 className="text-sm font-semibold text-muted-foreground">
+              Pengaturan POS Cabang —{" "}
+              <span className="text-foreground">{branchName}</span>
+            </h2>
+          </div>
+          <BranchPosCard branchPos={branchPos} />
+          <QrisCard qris={branchPos.qris_image_url} branchName={branchName} />
+          <BankCard banks={banks} branchName={branchName} />
+        </div>
+      )}
     </div>
   );
 }

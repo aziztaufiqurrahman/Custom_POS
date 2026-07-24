@@ -22,6 +22,7 @@ import { formatNumber, formatRupiah } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
   Card,
   CardContent,
@@ -116,6 +117,8 @@ export function ProductsClient({
       return true;
     });
   }, [products, query, category, stock]);
+
+  const pg = usePagination(filtered, view === "grid" ? 12 : 20);
 
   function refresh() {
     router.refresh();
@@ -242,7 +245,7 @@ export function ProductsClient({
             </div>
           ) : view === "grid" ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {filtered.map((p) => (
+              {pg.pageItems.map((p) => (
                 <div
                   key={p.id}
                   className="flex flex-col overflow-hidden rounded-lg border bg-card"
@@ -329,7 +332,7 @@ export function ProductsClient({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((p) => (
+                  {pg.pageItems.map((p) => (
                     <TableRow key={p.id}>
                       <TableCell>
                         <div className="relative size-10 overflow-hidden rounded bg-muted">
@@ -396,6 +399,15 @@ export function ProductsClient({
               </Table>
             </div>
           )}
+          <Pagination
+            page={pg.page}
+            totalPages={pg.totalPages}
+            from={pg.from}
+            to={pg.to}
+            total={pg.total}
+            onPage={pg.setPage}
+            unit="produk"
+          />
         </CardContent>
       </Card>
 

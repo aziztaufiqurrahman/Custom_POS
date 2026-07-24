@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { RupiahInput } from "@/components/ui/rupiah-input";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
   Card,
   CardContent,
@@ -48,6 +49,7 @@ export function HargaCabangClient({
       r.name.toLowerCase().includes(query.toLowerCase()) ||
       r.sku.toLowerCase().includes(query.toLowerCase()),
   );
+  const pg = usePagination(filtered, 12);
 
   function dirty(r: BranchProductRow): boolean {
     const d = drafts[r.product_id];
@@ -117,7 +119,7 @@ export function HargaCabangClient({
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r) => {
+              {pg.pageItems.map((r) => {
                 const d = drafts[r.product_id];
                 const isDirty = dirty(r);
                 return (
@@ -174,6 +176,15 @@ export function HargaCabangClient({
             </p>
           )}
         </div>
+        <Pagination
+          page={pg.page}
+          totalPages={pg.totalPages}
+          from={pg.from}
+          to={pg.to}
+          total={pg.total}
+          onPage={pg.setPage}
+          unit="produk"
+        />
       </CardContent>
     </Card>
   );

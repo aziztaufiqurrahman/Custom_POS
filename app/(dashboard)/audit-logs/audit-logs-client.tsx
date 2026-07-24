@@ -60,6 +60,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
   Card,
   CardContent,
@@ -109,6 +110,7 @@ export function AuditLogsClient({
   const [from, setFrom] = useState(filters.from);
   const [to, setTo] = useState(filters.to);
   const [action, setAction] = useState(filters.action);
+  const pg = usePagination(rows, 20);
 
   function apply() {
     const p = new URLSearchParams();
@@ -167,7 +169,7 @@ export function AuditLogsClient({
                   </TableCell>
                 </TableRow>
               ) : (
-                rows.map((r) => (
+                pg.pageItems.map((r) => (
                   <TableRow key={r.id}>
                     <TableCell className="whitespace-nowrap text-muted-foreground">
                       {formatTanggalRingkas(r.created_at)}
@@ -186,6 +188,15 @@ export function AuditLogsClient({
             </TableBody>
           </Table>
         </div>
+        <Pagination
+          page={pg.page}
+          totalPages={pg.totalPages}
+          from={pg.from}
+          to={pg.to}
+          total={pg.total}
+          onPage={pg.setPage}
+          unit="catatan"
+        />
       </CardContent>
     </Card>
   );
