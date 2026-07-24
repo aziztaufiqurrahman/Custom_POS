@@ -63,7 +63,10 @@ export function NotificationBell() {
         );
         setUnread((u) => Math.max(0, u - 1));
       }
-      if (n.link) router.push(n.link);
+      if (n.link) {
+        if (/^https?:\/\//i.test(n.link)) window.open(n.link, "_blank");
+        else router.push(n.link);
+      }
     });
   }
 

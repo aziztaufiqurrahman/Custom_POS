@@ -11,6 +11,7 @@ import {
   renameCategory,
   saveBankAccount,
   updateBranchPos,
+  updateOrgAlert,
   updateStoreProfile,
   updateThemeSettings,
 } from "./actions";
@@ -62,11 +63,15 @@ export function SettingsClient({
   branchPos,
   banks,
   categories,
+  isMasterAdmin = false,
+  alertWhatsapp = "",
 }: {
   store: StoreSettingsData;
   branchPos: BranchPosData;
   banks: BankData[];
   categories: CategoryData[];
+  isMasterAdmin?: boolean;
+  alertWhatsapp?: string;
 }) {
   const branchName = branchPos.branch_name ?? "Cabang aktif";
   return (
@@ -74,6 +79,7 @@ export function SettingsClient({
       {/* Global (brand & tampilan) */}
       <AppearanceCard store={store} />
       <ProfileCard store={store} />
+      {isMasterAdmin && <AlertCard alertWhatsapp={alertWhatsapp} />}
       <CategoryCard categories={categories} />
 
       {/* Per cabang aktif */}
@@ -87,6 +93,54 @@ export function SettingsClient({
       <QrisCard qris={branchPos.qris_image_url} branchName={branchName} />
       <BankCard banks={banks} branchName={branchName} />
     </div>
+  );
+}
+
+function AlertCard({ alertWhatsapp }: { alertWhatsapp: string }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [phone, setPhone] = useState(alertWhatsapp);
+
+  function submit() {
+    start(async () => {
+      const res = await updateOrgAlert(phone);
+      if (res.error) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success("Nomor peringatan disimpan");
+      router.refresh();
+    });
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Peringatan Anti-Fraud</CardTitle>
+        <CardDescription>
+          Nomor WhatsApp penerima peringatan (void, refund, selisih kas). Notifikasi
+          in-app selalu aktif; bila nomor diisi, notifikasi memuat tautan untuk
+          diteruskan ke WhatsApp.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid gap-1.5">
+          <Label htmlFor="alert-wa">Nomor WhatsApp peringatan (opsional)</Label>
+          <Input
+            id="alert-wa"
+            type="tel"
+            inputMode="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="mis. 0852xxxxxxx"
+            className="max-w-xs"
+          />
+        </div>
+        <Button onClick={submit} disabled={pending}>
+          {pending ? "Menyimpan…" : "Simpan"}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

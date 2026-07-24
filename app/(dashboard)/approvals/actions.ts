@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth";
 import { getBranchContext } from "@/lib/branch";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
+import { notifyRisky } from "@/lib/alerts";
 
 export type ApprovalResult = { error?: string; success?: boolean; pending?: boolean };
 
@@ -112,6 +113,14 @@ export async function decideApproval(
     branchId: appr.branch_id,
     metadata: { type: appr.request_type, reference_id: appr.reference_id },
   });
+
+  if (decision === "approved" && (appr.request_type === "void" || appr.request_type === "refund")) {
+    await notifyRisky({
+      branchId: appr.branch_id,
+      title: appr.request_type === "void" ? "Void disetujui" : "Refund disetujui",
+      body: `Permintaan ${appr.request_type} disetujui. Alasan: ${appr.reason ?? "-"}`,
+    });
+  }
 
   revalidatePath("/approvals");
   revalidatePath("/sales");

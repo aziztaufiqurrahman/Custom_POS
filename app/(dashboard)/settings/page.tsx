@@ -44,7 +44,7 @@ export default async function SettingsPage() {
   const branchCtx = await getBranchContext();
   const activeBranchId = branchCtx.activeBranchId;
 
-  const [{ data: settings }, { data: bs }, { data: banksRaw }, { data: categories }] =
+  const [{ data: settings }, { data: bs }, { data: banksRaw }, { data: categories }, { data: org }] =
     await Promise.all([
       supabase.from("store_settings").select("*").limit(1).maybeSingle(),
       activeBranchId
@@ -61,6 +61,7 @@ export default async function SettingsPage() {
             .eq("branch_id", activeBranchId)
         : Promise.resolve({ data: [] }),
       supabase.from("categories").select("id, name").order("name"),
+      supabase.from("org_settings").select("alert_whatsapp").limit(1).maybeSingle(),
     ]);
 
   const store: StoreSettingsData = {
@@ -105,6 +106,8 @@ export default async function SettingsPage() {
       branchPos={branchPos}
       banks={banks}
       categories={(categories ?? []) as CategoryData[]}
+      isMasterAdmin={branchCtx.isMasterAdmin}
+      alertWhatsapp={org?.alert_whatsapp ?? ""}
     />
   );
 }

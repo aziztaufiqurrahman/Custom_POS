@@ -6,6 +6,8 @@ import { getSession } from "@/lib/auth";
 import { getBranchContext } from "@/lib/branch";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
+import { notifyRisky } from "@/lib/alerts";
+import { formatRupiah } from "@/lib/format";
 import { computeReconciliation, type PaymentBreakdown } from "@/lib/shift";
 import {
   closeShiftSchema,
@@ -70,7 +72,7 @@ export async function closeShift(raw: unknown): Promise<ShiftActionResult> {
   const supabase = await createClient();
   const { data: session } = await supabase
     .from("cash_sessions")
-    .select("id, opening_balance")
+    .select("id, opening_balance, branch_id")
     .eq("cashier_id", userId)
     .eq("status", "open")
     .maybeSingle();
@@ -113,6 +115,17 @@ export async function closeShift(raw: unknown): Promise<ShiftActionResult> {
     entityId: session.id,
     metadata: { expected_cash: expectedCash, counted_cash: parsed.data.counted_cash, variance },
   });
+
+  // Peringatan bila kas selisih (lebih/kurang) — indikasi perlu ditinjau.
+  if (variance !== 0 && session.branch_id) {
+    await notifyRisky({
+      branchId: session.branch_id,
+      title: "Selisih kas saat tutup shift",
+      body: `${profile.full_name}: selisih ${formatRupiah(variance)} (fisik ${formatRupiah(
+        parsed.data.counted_cash,
+      )} vs seharusnya ${formatRupiah(expectedCash)}).`,
+    });
+  }
   revalidatePath("/shifts");
   return { success: true };
 }

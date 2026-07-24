@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
+import { notifyRisky } from "@/lib/alerts";
 import { createApproval, isApprover } from "@/app/(dashboard)/approvals/actions";
 
 export type SaleDetailItem = {
@@ -131,6 +132,11 @@ export async function voidSaleAction(id: string, reason: string): Promise<Action
   });
   if (error) return { error: error.message.replace(/^.*?:\s*/, "") };
 
+  await notifyRisky({
+    branchId: branch,
+    title: "Transaksi di-void",
+    body: `Void transaksi oleh ${profile.full_name}. Alasan: ${reason || "-"}`,
+  });
   revalidatePath("/sales");
   revalidatePath("/shifts");
   revalidatePath("/products");
@@ -163,6 +169,11 @@ export async function refundSaleAction(id: string, reason: string): Promise<Acti
   });
   if (error) return { error: error.message.replace(/^.*?:\s*/, "") };
 
+  await notifyRisky({
+    branchId: branch,
+    title: "Transaksi di-refund",
+    body: `Refund transaksi oleh ${profile.full_name}. Alasan: ${reason || "-"}`,
+  });
   revalidatePath("/sales");
   revalidatePath("/shifts");
   revalidatePath("/products");

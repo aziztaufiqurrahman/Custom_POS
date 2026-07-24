@@ -91,6 +91,27 @@ export async function updateBranchPos(raw: unknown): Promise<SettingsResult> {
   return { success: true };
 }
 
+export async function updateOrgAlert(
+  phone: string,
+): Promise<SettingsResult> {
+  const { profile } = await getSession();
+  if (profile?.is_master_admin !== true) return { error: "Hanya Master Admin" };
+
+  const supabase = await createClient();
+  const { data: row } = await supabase.from("org_settings").select("id").limit(1).maybeSingle();
+  if (!row) return { error: "Pengaturan organisasi tidak ditemukan" };
+
+  const { error } = await supabase
+    .from("org_settings")
+    .update({ alert_whatsapp: phone.trim() || null })
+    .eq("id", row.id);
+  if (error) return { error: "Gagal menyimpan nomor peringatan" };
+
+  await logAudit({ action: "settings.alert_update", entity: "org_settings", entityId: row.id });
+  revalidatePath("/settings");
+  return { success: true };
+}
+
 export async function updateThemeSettings(raw: unknown): Promise<SettingsResult> {
   if (!(await requireAdminSession())) return { error: "Hanya admin" };
   const parsed = themeSchema.safeParse(raw);
