@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { uuidish } from "./common";
+
 export const branchSchema = z.object({
   code: z
     .string()
@@ -17,6 +19,6 @@ export const branchSchema = z.object({
 export type BranchInput = z.infer<typeof branchSchema>;
 
 export const updateBranchSchema = branchSchema.extend({
-  id: z.string().uuid(),
+  id: uuidish,
 });
 export type UpdateBranchInput = z.infer<typeof updateBranchSchema>;

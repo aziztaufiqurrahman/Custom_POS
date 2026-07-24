@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { uuidish } from "./common";
+
 const qty = z.number({ message: "Harus angka" }).positive("Jumlah harus > 0");
 
 export const receiptItemSchema = z.object({
@@ -27,7 +29,7 @@ export const wastageSchema = z.object({
 export type WastageInput = z.infer<typeof wastageSchema>;
 
 export const transferSchema = z.object({
-  to_branch_id: z.string().uuid("Cabang tujuan wajib dipilih"),
+  to_branch_id: uuidish,
   note: z.string().max(200).optional().or(z.literal("")),
   items: z.array(lineItemSchema).min(1, "Tambahkan minimal 1 item"),
 });
