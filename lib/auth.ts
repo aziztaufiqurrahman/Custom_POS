@@ -39,9 +39,19 @@ export async function requireAuth(): Promise<{ userId: string; profile: Profile 
   return { userId, profile };
 }
 
-/** Pastikan user adalah admin; jika bukan, redirect. */
+/** Pastikan user adalah admin (peran cabang admin/manajer); jika bukan, redirect. */
 export async function requireAdmin(): Promise<{ userId: string; profile: Profile }> {
   const session = await requireAuth();
   if (session.profile.role !== "admin") redirect("/pos");
+  return session;
+}
+
+/**
+ * Pastikan user adalah MASTER ADMIN (global). Dipakai untuk halaman lintas
+ * cabang: kelola cabang, kelola user, katalog global. Non-master → /pos.
+ */
+export async function requireMasterAdmin(): Promise<{ userId: string; profile: Profile }> {
+  const session = await requireAuth();
+  if (session.profile.is_master_admin !== true) redirect("/pos");
   return session;
 }

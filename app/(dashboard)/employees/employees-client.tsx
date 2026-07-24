@@ -13,7 +13,7 @@ import {
   setEmployeeActive,
   updateEmployee,
 } from "./actions";
-import type { EmployeeRow } from "./page";
+import type { BranchOption, EmployeeRow } from "./page";
 import {
   PERMISSIONS,
   PERMISSION_LABELS,
@@ -85,7 +85,7 @@ function PermissionPicker({
       <Label>Hak akses granular</Label>
       {disabled ? (
         <p className="text-sm text-muted-foreground">
-          Admin memiliki semua hak akses secara otomatis.
+          Manajer memiliki semua hak akses cabang secara otomatis.
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-2 rounded-md border p-3 sm:grid-cols-2">
@@ -107,7 +107,41 @@ function PermissionPicker({
   );
 }
 
-function AddEmployeeDialog({ onDone }: { onDone: () => void }) {
+function BranchSelectField({
+  branches,
+  value,
+  onChange,
+}: {
+  branches: BranchOption[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="grid gap-2">
+      <Label>Cabang</Label>
+      <Select value={value} onValueChange={(v) => onChange(v ?? "")}>
+        <SelectTrigger>
+          <SelectValue placeholder="Pilih cabang" />
+        </SelectTrigger>
+        <SelectContent>
+          {branches.map((b) => (
+            <SelectItem key={b.id} value={b.id}>
+              {b.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function AddEmployeeDialog({
+  branches,
+  onDone,
+}: {
+  branches: BranchOption[];
+  onDone: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const form = useForm<CreateEmployeeInput>({
@@ -116,6 +150,7 @@ function AddEmployeeDialog({ onDone }: { onDone: () => void }) {
       full_name: "",
       email: "",
       phone: "",
+      branch_id: branches[0]?.id ?? "",
       role: "kasir",
       permissions: [],
     },
@@ -164,8 +199,20 @@ function AddEmployeeDialog({ onDone }: { onDone: () => void }) {
             <Label htmlFor="add-phone">No. HP (opsional)</Label>
             <Input id="add-phone" {...form.register("phone")} />
           </div>
+          <Controller
+            control={form.control}
+            name="branch_id"
+            render={({ field }) => (
+              <BranchSelectField
+                branches={branches}
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
+          />
+          <FieldError msg={form.formState.errors.branch_id?.message} />
           <div className="grid gap-2">
-            <Label>Peran</Label>
+            <Label>Peran di cabang</Label>
             <Controller
               control={form.control}
               name="role"
@@ -176,7 +223,7 @@ function AddEmployeeDialog({ onDone }: { onDone: () => void }) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="kasir">Kasir</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="admin">Manajer</SelectItem>
                   </SelectContent>
                 </Select>
               )}
@@ -206,11 +253,13 @@ function AddEmployeeDialog({ onDone }: { onDone: () => void }) {
 
 function EditEmployeeDialog({
   employee,
+  branches,
   open,
   onOpenChange,
   onDone,
 }: {
   employee: EmployeeRow;
+  branches: BranchOption[];
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onDone: () => void;
@@ -222,6 +271,7 @@ function EditEmployeeDialog({
       id: employee.id,
       full_name: employee.full_name,
       phone: employee.phone ?? "",
+      branch_id: employee.branch_id ?? branches[0]?.id ?? "",
       role: employee.role,
       permissions: employee.permissions.filter((p): p is Permission =>
         (PERMISSIONS as readonly string[]).includes(p),
@@ -260,8 +310,19 @@ function EditEmployeeDialog({
             <Label htmlFor="edit-phone">No. HP (opsional)</Label>
             <Input id="edit-phone" {...form.register("phone")} />
           </div>
+          <Controller
+            control={form.control}
+            name="branch_id"
+            render={({ field }) => (
+              <BranchSelectField
+                branches={branches}
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
+          />
           <div className="grid gap-2">
-            <Label>Peran</Label>
+            <Label>Peran di cabang</Label>
             <Controller
               control={form.control}
               name="role"
@@ -272,7 +333,7 @@ function EditEmployeeDialog({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="kasir">Kasir</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="admin">Manajer</SelectItem>
                   </SelectContent>
                 </Select>
               )}
@@ -307,10 +368,12 @@ function FieldError({ msg }: { msg?: string }) {
 
 export function EmployeesClient({
   employees,
+  branches,
   currentUserId,
   serviceRoleMissing = false,
 }: {
   employees: EmployeeRow[];
+  branches: BranchOption[];
   currentUserId: string;
   serviceRoleMissing?: boolean;
 }) {
@@ -364,7 +427,7 @@ export function EmployeesClient({
               <Plus className="size-4" /> Undang Karyawan
             </Button>
           ) : (
-            <AddEmployeeDialog onDone={refresh} />
+            <AddEmployeeDialog branches={branches} onDone={refresh} />
           )}
         </CardHeader>
         <CardContent>
@@ -374,6 +437,7 @@ export function EmployeesClient({
                 <TableRow>
                   <TableHead>Nama</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>Cabang</TableHead>
                   <TableHead>Peran</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-10" />
@@ -393,13 +457,17 @@ export function EmployeesClient({
                     <TableCell className="text-muted-foreground">
                       {emp.email}
                     </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {emp.branch_name ?? "—"}
+                    </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={emp.role === "admin" ? "default" : "secondary"}
-                        className="capitalize"
-                      >
-                        {emp.role}
-                      </Badge>
+                      {emp.is_master_admin ? (
+                        <Badge>Master Admin</Badge>
+                      ) : (
+                        <Badge variant={emp.role === "admin" ? "default" : "secondary"}>
+                          {emp.role === "admin" ? "Manajer" : "Kasir"}
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant={emp.is_active ? "outline" : "destructive"}>
@@ -442,6 +510,7 @@ export function EmployeesClient({
         <EditEmployeeDialog
           key={editing.id}
           employee={editing}
+          branches={branches}
           open={!!editing}
           onOpenChange={(o) => !o && setEditing(null)}
           onDone={refresh}

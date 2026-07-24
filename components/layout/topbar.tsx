@@ -7,8 +7,9 @@ import { LogOut, Menu } from "lucide-react";
 
 import { signOut } from "@/app/(dashboard)/actions";
 import { useAuth } from "@/components/providers/auth-provider";
-import { NAV_ITEMS } from "@/lib/nav";
+import { visibleNav } from "@/lib/nav";
 import { cn } from "@/lib/utils";
+import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,11 +33,11 @@ function initials(name: string): string {
 }
 
 export function Topbar() {
-  const { profile, isAdmin } = useAuth();
+  const { profile, isAdmin, isMasterAdmin } = useAuth();
   const pathname = usePathname();
   const [pending, startTransition] = useTransition();
 
-  const items = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
+  const items = visibleNav({ isAdmin, isMasterAdmin });
   const current = items.find(
     (i) => pathname === i.href || pathname.startsWith(i.href + "/"),
   );
@@ -92,6 +93,9 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-1">
+        {/* Pemilih cabang */}
+        <BranchSwitcher />
+
         {/* Notifikasi */}
         <NotificationBell />
 

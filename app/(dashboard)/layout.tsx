@@ -1,4 +1,5 @@
 import { requireAuth } from "@/lib/auth";
+import { getBranchContext } from "@/lib/branch";
 import { createClient } from "@/lib/supabase/server";
 import { themeCss } from "@/lib/themes";
 import { AuthProvider } from "@/components/providers/auth-provider";
@@ -11,6 +12,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { profile } = await requireAuth();
+  const branchCtx = await getBranchContext();
 
   // Tema kustom toko (dipilih admin). Disuntikkan sebagai override :root khusus
   // area dashboard, sehingga menimpa token globals.css secara menyeluruh —
@@ -31,7 +33,12 @@ export default async function DashboardLayout({
   });
 
   return (
-    <AuthProvider profile={profile}>
+    <AuthProvider
+      profile={profile}
+      isMasterAdmin={branchCtx.isMasterAdmin}
+      branches={branchCtx.branches}
+      activeBranch={branchCtx.activeBranch}
+    >
       <style dangerouslySetInnerHTML={{ __html: css }} />
       <div className="flex min-h-svh bg-background">
         <Sidebar />

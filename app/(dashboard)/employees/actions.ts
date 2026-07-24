@@ -3,17 +3,28 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-import { requireAdmin } from "@/lib/auth";
+import { requireMasterAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getServiceRoleKey } from "@/lib/supabase/env";
 import { logAudit } from "@/lib/audit";
+import {
+  DEFAULT_CASHIER_PERMISSIONS,
+  DEFAULT_MANAGER_PERMISSIONS,
+} from "@/lib/constants";
 import {
   createEmployeeSchema,
   updateEmployeeSchema,
 } from "@/lib/validations/employee";
 
 export type EmployeeActionResult = { error?: string; success?: boolean };
+
+/** Peran cabang + izin default dari peran lama (admin→manajer, kasir→kasir). */
+function branchRoleFor(role: "admin" | "kasir") {
+  return role === "admin"
+    ? { role: "manager" as const, permissions: DEFAULT_MANAGER_PERMISSIONS }
+    : { role: "cashier" as const, permissions: DEFAULT_CASHIER_PERMISSIONS };
+}
 
 async function getOrigin(): Promise<string> {
   const h = await headers();
@@ -25,7 +36,7 @@ async function getOrigin(): Promise<string> {
 export async function createEmployee(
   raw: unknown,
 ): Promise<EmployeeActionResult> {
-  await requireAdmin();
+  await requireMasterAdmin();
 
   const parsed = createEmployeeSchema.safeParse(raw);
   if (!parsed.success) {
@@ -79,11 +90,28 @@ export async function createEmployee(
     return { error: "Gagal menyimpan profil karyawan" };
   }
 
+  // Keanggotaan cabang (model multi-cabang).
+  const bm = branchRoleFor(data.role);
+  const { error: memErr } = await admin.from("branch_memberships").upsert(
+    {
+      user_id: uid,
+      branch_id: data.branch_id,
+      role: bm.role,
+      permissions: bm.permissions,
+      is_active: true,
+    },
+    { onConflict: "user_id,branch_id" },
+  );
+  if (memErr) {
+    await admin.auth.admin.deleteUser(uid);
+    return { error: "Gagal menetapkan cabang karyawan" };
+  }
+
   await logAudit({
     action: "employee.create",
     entity: "profile",
     entityId: uid,
-    metadata: { email: data.email, role: data.role },
+    metadata: { email: data.email, role: data.role, branch_id: data.branch_id },
   });
 
   revalidatePath("/employees");
@@ -93,7 +121,7 @@ export async function createEmployee(
 export async function updateEmployee(
   raw: unknown,
 ): Promise<EmployeeActionResult> {
-  const { userId } = await requireAdmin();
+  const { userId } = await requireMasterAdmin();
 
   const parsed = updateEmployeeSchema.safeParse(raw);
   if (!parsed.success) {
@@ -106,7 +134,7 @@ export async function updateEmployee(
     return { error: "Tidak bisa mengubah peran akun Anda sendiri" };
   }
 
-  // Pakai client biasa (admin ditegakkan via RLS) — tidak butuh service role.
+  // Pakai client biasa (master admin ditegakkan via RLS) — tidak butuh service role.
   const supabase = await createClient();
   const { error } = await supabase
     .from("profiles")
@@ -120,11 +148,25 @@ export async function updateEmployee(
 
   if (error) return { error: "Gagal memperbarui karyawan" };
 
+  // Sinkronkan keanggotaan cabang.
+  const bm = branchRoleFor(data.role);
+  const { error: memErr } = await supabase.from("branch_memberships").upsert(
+    {
+      user_id: data.id,
+      branch_id: data.branch_id,
+      role: bm.role,
+      permissions: bm.permissions,
+      is_active: true,
+    },
+    { onConflict: "user_id,branch_id" },
+  );
+  if (memErr) return { error: "Gagal menyimpan cabang karyawan" };
+
   await logAudit({
     action: "employee.update",
     entity: "profile",
     entityId: data.id,
-    metadata: { role: data.role, permissions: data.permissions },
+    metadata: { role: data.role, branch_id: data.branch_id },
   });
 
   revalidatePath("/employees");
@@ -135,7 +177,7 @@ export async function setEmployeeActive(
   id: string,
   isActive: boolean,
 ): Promise<EmployeeActionResult> {
-  const { userId } = await requireAdmin();
+  const { userId } = await requireMasterAdmin();
 
   if (id === userId && !isActive) {
     return { error: "Tidak bisa menonaktifkan akun Anda sendiri" };
@@ -163,7 +205,7 @@ export async function setEmployeeActive(
 export async function sendEmployeeReset(
   email: string,
 ): Promise<EmployeeActionResult> {
-  await requireAdmin();
+  await requireMasterAdmin();
   const supabase = await createClient();
   const origin = await getOrigin();
   await supabase.auth.resetPasswordForEmail(email, {

@@ -5,14 +5,14 @@ import { usePathname } from "next/navigation";
 import { Store } from "lucide-react";
 
 import { useAuth } from "@/components/providers/auth-provider";
-import { NAV_ITEMS } from "@/lib/nav";
+import { visibleNav } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isMasterAdmin } = useAuth();
 
-  const items = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
+  const items = visibleNav({ isAdmin, isMasterAdmin });
 
   return (
     <nav className="flex flex-col gap-1 px-3 py-2">
