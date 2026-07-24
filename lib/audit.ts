@@ -11,6 +11,7 @@ export async function logAudit(entry: {
   action: string;
   entity?: string;
   entityId?: string | null;
+  branchId?: string | null;
   metadata?: Json;
 }): Promise<void> {
   const supabase = await createClient();
@@ -24,6 +25,7 @@ export async function logAudit(entry: {
     action: entry.action,
     entity: entry.entity ?? null,
     entity_id: entry.entityId ?? null,
+    branch_id: entry.branchId ?? null,
     metadata: entry.metadata ?? null,
   });
 }

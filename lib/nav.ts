@@ -1,4 +1,5 @@
 import {
+  BadgeCheck,
   Boxes,
   Clock,
   LayoutDashboard,
@@ -6,6 +7,7 @@ import {
   Receipt,
   ScrollText,
   Settings,
+  ShieldCheck,
   ShoppingCart,
   Store,
   Users,
@@ -28,7 +30,9 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/inventory", label: "Inventory", icon: Boxes, adminOnly: false },
   { href: "/shifts", label: "Shift", icon: Clock, adminOnly: false },
   { href: "/sales", label: "Penjualan", icon: Receipt, adminOnly: false },
+  { href: "/approvals", label: "Persetujuan", icon: BadgeCheck, adminOnly: true },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: true },
+  { href: "/keamanan", label: "Keamanan", icon: ShieldCheck, adminOnly: true },
   { href: "/branches", label: "Cabang", icon: Store, adminOnly: true, masterAdminOnly: true },
   { href: "/employees", label: "Karyawan", icon: Users, adminOnly: true, masterAdminOnly: true },
   { href: "/audit-logs", label: "Audit Log", icon: ScrollText, adminOnly: true },

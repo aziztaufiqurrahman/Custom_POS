@@ -538,9 +538,15 @@ function ActionDialog({
         toast.error(res.error);
         return;
       }
-      toast.success(
-        isVoid ? "Transaksi di-void, stok dikembalikan" : "Transaksi di-refund, stok dikembalikan",
-      );
+      if (res.pending) {
+        toast.success(
+          "Permintaan dikirim — menunggu persetujuan manajer.",
+        );
+      } else {
+        toast.success(
+          isVoid ? "Transaksi di-void, stok dikembalikan" : "Transaksi di-refund, stok dikembalikan",
+        );
+      }
       onDone();
     });
   }

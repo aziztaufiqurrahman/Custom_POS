@@ -1806,6 +1806,20 @@ export type Database = {
         }
         Returns: Json
       }
+      branch_seq_gaps: {
+        Args: never
+        Returns: {
+          branch_id: string
+          branch_name: string
+          max_seq: number
+          missing: number
+          trx_count: number
+        }[]
+      }
+      close_daily: {
+        Args: { p_branch_id: string; p_business_date: string }
+        Returns: Json
+      }
       complete_opname: {
         Args: { p_items: Json; p_opname_id: string }
         Returns: Json
