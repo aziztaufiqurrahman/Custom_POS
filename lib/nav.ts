@@ -11,6 +11,7 @@ import {
   ShoppingCart,
   Store,
   Users,
+  Warehouse,
   type LucideIcon,
 } from "lucide-react";
 
@@ -28,6 +29,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/pos", label: "Kasir", icon: ShoppingCart, adminOnly: false },
   { href: "/products", label: "Produk", icon: Package, adminOnly: false },
   { href: "/inventory", label: "Inventory", icon: Boxes, adminOnly: false },
+  { href: "/gudang", label: "Gudang", icon: Warehouse, adminOnly: true },
   { href: "/shifts", label: "Shift", icon: Clock, adminOnly: false },
   { href: "/sales", label: "Penjualan", icon: Receipt, adminOnly: false },
   { href: "/approvals", label: "Persetujuan", icon: BadgeCheck, adminOnly: true },

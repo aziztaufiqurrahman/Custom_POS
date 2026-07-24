@@ -1837,11 +1837,21 @@ export type Database = {
         }
         Returns: Json
       }
+      create_transfer: {
+        Args: {
+          p_from_branch: string
+          p_items?: Json
+          p_note?: string
+          p_to_branch: string
+        }
+        Returns: Json
+      }
       dashboard_analytics: {
         Args: { p_bucket?: string; p_from: string; p_to: string }
         Returns: Json
       }
       dashboard_kpis: { Args: never; Returns: Json }
+      dispatch_transfer: { Args: { p_transfer_id: string }; Returns: Json }
       has_branch_permission: {
         Args: { b: string; perm: string }
         Returns: boolean
@@ -1853,6 +1863,25 @@ export type Database = {
       has_permission: { Args: { perm: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_master_admin: { Args: never; Returns: boolean }
+      receive_goods: {
+        Args: {
+          p_branch_id: string
+          p_items?: Json
+          p_note?: string
+          p_supplier_id?: string
+        }
+        Returns: Json
+      }
+      receive_transfer: { Args: { p_transfer_id: string }; Returns: Json }
+      record_wastage: {
+        Args: {
+          p_branch_id: string
+          p_items?: Json
+          p_photo_url?: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       refund_sale: {
         Args: { p_reason?: string; p_transaction_id: string }
         Returns: Json
@@ -1897,6 +1926,9 @@ export type Database = {
         | "opname"
         | "adjustment"
         | "restock"
+        | "transfer_out"
+        | "transfer_in"
+        | "wastage"
       opname_status: "draft" | "completed"
       payment_method: "cash" | "qris" | "transfer" | "gofood" | "shopeefood"
       session_status: "open" | "closed"
@@ -2053,6 +2085,9 @@ export const Constants = {
         "opname",
         "adjustment",
         "restock",
+        "transfer_out",
+        "transfer_in",
+        "wastage",
       ],
       opname_status: ["draft", "completed"],
       payment_method: ["cash", "qris", "transfer", "gofood", "shopeefood"],
