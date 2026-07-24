@@ -93,20 +93,24 @@ export function DashboardClient({
   lowStock,
   variances,
   range,
+  branchFilter = null,
 }: {
   kpis: DashKpis;
   analytics: DashAnalytics;
   lowStock: LowStockItem[];
   variances: VarianceItem[];
   range: { from: string; to: string; bucket: string };
+  branchFilter?: { branches: { id: string; name: string }[]; selected: string } | null;
 }) {
   const router = useRouter();
   const [from, setFrom] = useState(range.from);
   const [to, setTo] = useState(range.to);
   const [bucket, setBucket] = useState(range.bucket);
+  const [branch, setBranch] = useState(branchFilter?.selected ?? "all");
 
   function apply() {
     const p = new URLSearchParams({ from, to, bucket });
+    if (branchFilter) p.set("branch", branch);
     router.push(`/dashboard?${p.toString()}`);
   }
 
@@ -146,6 +150,21 @@ export function DashboardClient({
       {/* Filter rentang */}
       <Card>
         <CardContent className="flex flex-wrap items-end gap-3 p-4">
+          {branchFilter && (
+            <div className="grid gap-1.5">
+              <Label className="text-xs">Cabang</Label>
+              <select
+                value={branch}
+                onChange={(e) => setBranch(e.target.value)}
+                className="h-9 rounded-md border bg-transparent px-2 text-sm"
+              >
+                <option value="all">Semua cabang (konsolidasi)</option>
+                {branchFilter.branches.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="grid gap-1.5">
             <Label className="text-xs">Dari</Label>
             <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />

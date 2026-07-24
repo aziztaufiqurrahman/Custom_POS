@@ -805,6 +805,7 @@ export type Database = {
       }
       org_settings: {
         Row: {
+          alert_whatsapp: string | null
           created_at: string
           default_adjustment_threshold: number
           default_discount_threshold: number
@@ -814,6 +815,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          alert_whatsapp?: string | null
           created_at?: string
           default_adjustment_threshold?: number
           default_discount_threshold?: number
@@ -823,6 +825,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          alert_whatsapp?: string | null
           created_at?: string
           default_adjustment_threshold?: number
           default_discount_threshold?: number
@@ -1847,10 +1850,15 @@ export type Database = {
         Returns: Json
       }
       dashboard_analytics: {
-        Args: { p_bucket?: string; p_from: string; p_to: string }
+        Args: {
+          p_branch_id?: string
+          p_bucket?: string
+          p_from: string
+          p_to: string
+        }
         Returns: Json
       }
-      dashboard_kpis: { Args: never; Returns: Json }
+      dashboard_kpis: { Args: { p_branch_id?: string }; Returns: Json }
       dispatch_transfer: { Args: { p_transfer_id: string }; Returns: Json }
       has_branch_permission: {
         Args: { b: string; perm: string }

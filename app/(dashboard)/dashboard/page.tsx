@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/lib/auth";
+import { getBranchContext } from "@/lib/branch";
 import { createClient } from "@/lib/supabase/server";
 
 import { DashboardClient } from "./dashboard-client";
@@ -56,6 +57,7 @@ export default async function DashboardPage({
   const sp = await searchParams;
   await requireAdmin();
   const supabase = await createClient();
+  const ctx = await getBranchContext();
 
   const today = jakartaToday();
   const monthStart = today.slice(0, 8) + "01";
@@ -63,13 +65,24 @@ export default async function DashboardPage({
   const to = sp.to || today;
   const bucket = sp.bucket === "week" || sp.bucket === "month" ? sp.bucket : "day";
 
+  // Cabang: master admin bisa "semua" (null) atau pilih; manajer terkunci cabangnya.
+  const accessibleIds = ctx.branches.map((b) => b.id);
+  const branchSel =
+    ctx.isMasterAdmin
+      ? sp.branch && accessibleIds.includes(sp.branch)
+        ? sp.branch
+        : "all"
+      : (ctx.activeBranchId ?? "all");
+  const pBranchId = branchSel === "all" ? undefined : branchSel;
+
   const [{ data: kpisData }, { data: analyticsData }, { data: products }, { data: variances }] =
     await Promise.all([
-      supabase.rpc("dashboard_kpis"),
+      supabase.rpc("dashboard_kpis", { p_branch_id: pBranchId }),
       supabase.rpc("dashboard_analytics", {
         p_from: `${from}T00:00:00+07:00`,
         p_to: `${to}T23:59:59+07:00`,
         p_bucket: bucket,
+        p_branch_id: pBranchId,
       }),
       supabase
         .from("products_public")
@@ -108,6 +121,11 @@ export default async function DashboardPage({
       lowStock={lowStock}
       variances={varianceItems}
       range={{ from, to, bucket }}
+      branchFilter={
+        ctx.isMasterAdmin && ctx.branches.length > 1
+          ? { branches: ctx.branches.map((b) => ({ id: b.id, name: b.name })), selected: branchSel }
+          : null
+      }
     />
   );
 }
