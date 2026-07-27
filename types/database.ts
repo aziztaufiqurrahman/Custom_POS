@@ -21,6 +21,7 @@ export type Database = {
           created_at: string
           decided_at: string | null
           id: string
+          payload: Json | null
           reason: string | null
           reference_id: string | null
           reference_type: string | null
@@ -34,6 +35,7 @@ export type Database = {
           created_at?: string
           decided_at?: string | null
           id?: string
+          payload?: Json | null
           reason?: string | null
           reference_id?: string | null
           reference_type?: string | null
@@ -47,6 +49,7 @@ export type Database = {
           created_at?: string
           decided_at?: string | null
           id?: string
+          payload?: Json | null
           reason?: string | null
           reference_id?: string | null
           reference_type?: string | null
@@ -1809,6 +1812,7 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_price_override: { Args: { p_approval_id: string }; Returns: Json }
       branch_seq_gaps: {
         Args: never
         Returns: {
@@ -1901,6 +1905,17 @@ export type Database = {
           p_note?: string
           p_product_id: string
           p_qty: number
+        }
+        Returns: Json
+      }
+      set_branch_price_stock: {
+        Args: {
+          p_branch_id: string
+          p_is_active?: boolean
+          p_min_stock?: number
+          p_price: number
+          p_product_id: string
+          p_stock: number
         }
         Returns: Json
       }
