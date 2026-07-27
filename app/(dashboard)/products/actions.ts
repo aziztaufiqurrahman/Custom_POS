@@ -3,10 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getSession } from "@/lib/auth";
-import { can } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { getServiceRoleKey } from "@/lib/supabase/env";
 import { logAudit } from "@/lib/audit";
 import {
   createProductPayloadSchema,
@@ -33,8 +30,9 @@ export async function createProduct(
 ): Promise<ProductActionResult> {
   const { profile } = await getSession();
   if (!profile) return { error: "Tidak terautentikasi" };
-  if (!can(profile, "product.create")) {
-    return { error: "Tidak berwenang menambah produk" };
+  // Katalog global hanya dikelola admin pusat (master admin).
+  if (!profile.is_master_admin) {
+    return { error: "Hanya admin pusat yang dapat menambah produk" };
   }
 
   const parsed = createProductPayloadSchema.safeParse(raw);
@@ -44,6 +42,7 @@ export async function createProduct(
   const d = parsed.data;
 
   const supabase = await createClient();
+  // Harga jual & stok master = 0; harga/stok riil diatur per cabang.
   const { data: inserted, error } = await supabase
     .from("products")
     .insert({
@@ -53,10 +52,10 @@ export async function createProduct(
       category_id: d.category_id || null,
       description: nullify(d.description),
       unit: d.unit,
-      sell_price: d.sell_price,
-      // Kasir tidak boleh menetapkan harga modal.
-      cost_price: profile.role === "admin" ? d.cost_price : null,
-      stock: d.initial_stock,
+      sell_price: 0,
+      cost_price: d.cost_price, // HPP global (base_cost_price di bawah)
+      base_cost_price: d.cost_price,
+      stock: 0,
       min_stock: d.min_stock,
       is_taxable: d.is_taxable,
       discount_type: d.discount_type,
@@ -76,27 +75,24 @@ export async function createProduct(
     return { error: "Gagal menyimpan produk" };
   }
 
-  // Catat stok awal (stock_movements 'initial'). RLS stock_movements = admin;
-  // gunakan admin client (aksi sudah diverifikasi izinnya di atas).
-  // Catatan stok awal butuh service role (RLS movements = admin). Best-effort:
-  // bila belum dikonfigurasi, produk & stok tetap tersimpan, hanya log dilewati.
-  if (d.initial_stock > 0 && getServiceRoleKey() !== "") {
-    const admin = createAdminClient();
-    await admin.from("stock_movements").insert({
-      product_id: inserted.id,
-      type: "initial",
-      qty_change: d.initial_stock,
-      stock_after: d.initial_stock,
-      note: "Stok awal",
-      created_by: profile.id,
-    });
+  // Trigger DB menyemai branch_products ke SEMUA cabang (harga & stok 0).
+  // Sesuai pilihan cabang tujuan, hapus baris untuk cabang yang TIDAK dipilih
+  // → produk hanya tersedia di cabang terpilih (mendukung produk khusus cabang).
+  const { error: trimErr } = await supabase
+    .from("branch_products")
+    .delete()
+    .eq("product_id", inserted.id)
+    .not("branch_id", "in", `(${d.branch_ids.join(",")})`);
+  if (trimErr) {
+    // Non-fatal: produk tetap tersimpan; admin bisa merapikan lewat Harga & Stok.
+    console.error("Gagal memangkas cabang produk baru:", trimErr.message);
   }
 
   await logAudit({
     action: "product.create",
     entity: "product",
     entityId: inserted.id,
-    metadata: { sku: d.sku, name: d.name },
+    metadata: { sku: d.sku, name: d.name, branches: d.branch_ids.length },
   });
 
   revalidatePath("/products");
@@ -108,8 +104,8 @@ export async function updateProduct(
 ): Promise<ProductActionResult> {
   const { profile } = await getSession();
   if (!profile) return { error: "Tidak terautentikasi" };
-  if (!can(profile, "product.edit")) {
-    return { error: "Tidak berwenang mengedit produk" };
+  if (!profile.is_master_admin) {
+    return { error: "Hanya admin pusat yang dapat mengedit produk" };
   }
 
   const parsed = updateProductPayloadSchema.safeParse(raw);
@@ -125,7 +121,6 @@ export async function updateProduct(
     category_id: d.category_id || null,
     description: nullify(d.description),
     unit: d.unit,
-    sell_price: d.sell_price,
     min_stock: d.min_stock,
     is_taxable: d.is_taxable,
     discount_type: d.discount_type,
@@ -134,11 +129,10 @@ export async function updateProduct(
     is_active: d.is_active,
     image_url: d.image_url,
     image_urls: d.image_urls,
+    // HPP global (base_cost_price + cost_price legacy).
+    cost_price: d.cost_price,
+    base_cost_price: d.cost_price,
   };
-  // Hanya admin yang boleh mengubah harga modal (kasir: biarkan nilai lama).
-  if (profile.role === "admin") {
-    update.cost_price = d.cost_price;
-  }
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -168,11 +162,12 @@ export async function updateProduct(
 export async function deleteProduct(id: string): Promise<ProductActionResult> {
   const { profile } = await getSession();
   if (!profile) return { error: "Tidak terautentikasi" };
-  if (!can(profile, "product.delete")) {
-    return { error: "Tidak berwenang menghapus produk" };
+  if (!profile.is_master_admin) {
+    return { error: "Hanya admin pusat yang dapat menghapus produk" };
   }
 
   const supabase = await createClient();
+  // Soft delete: trigger DB otomatis menonaktifkan produk di SEMUA cabang.
   const { error } = await supabase
     .from("products")
     .update({ deleted_at: new Date().toISOString(), is_active: false })

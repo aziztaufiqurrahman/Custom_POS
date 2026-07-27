@@ -29,7 +29,7 @@ export type NavItem = {
 
 export const NAV_ITEMS: NavItem[] = [
   { href: "/pos", label: "Kasir", icon: ShoppingCart, adminOnly: false },
-  { href: "/products", label: "Produk", icon: Package, adminOnly: false },
+  { href: "/products", label: "Produk", icon: Package, adminOnly: true, masterAdminOnly: true },
   { href: "/harga-cabang", label: "Harga Cabang", icon: Tags, adminOnly: true },
   { href: "/inventory", label: "Inventory", icon: Boxes, adminOnly: false },
   { href: "/gudang", label: "Gudang", icon: Warehouse, adminOnly: true },

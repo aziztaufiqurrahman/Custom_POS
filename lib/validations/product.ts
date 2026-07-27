@@ -1,9 +1,13 @@
 import { z } from "zod";
 
+import { uuidish } from "./common";
+
 const money = z
   .number({ message: "Harus berupa angka" })
   .min(0, "Tidak boleh negatif");
 
+// Katalog global: harga jual & stok TIDAK lagi di sini — keduanya diatur
+// per cabang (branch_products) oleh admin pusat lewat "Harga & Stok Cabang".
 export const productInputSchema = z.object({
   name: z.string().trim().min(1, "Nama wajib diisi").max(150),
   sku: z.string().trim().min(1, "SKU wajib diisi").max(60),
@@ -11,8 +15,7 @@ export const productInputSchema = z.object({
   category_id: z.string(), // "" berarti tanpa kategori
   description: z.string().max(2000),
   unit: z.string().trim().min(1, "Satuan wajib diisi").max(20),
-  sell_price: money,
-  cost_price: money.nullable(), // hanya admin; kasir null
+  cost_price: money.nullable(), // HPP global; hanya admin pusat
   min_stock: money,
   is_taxable: z.boolean(),
   discount_type: z.enum(["none", "amount", "percent"]),
@@ -23,7 +26,8 @@ export const productInputSchema = z.object({
 export type ProductInput = z.infer<typeof productInputSchema>;
 
 export const createProductSchema = productInputSchema.extend({
-  initial_stock: money,
+  // Cabang tujuan produk baru (harga & stok awal 0, diisi pusat kemudian).
+  branch_ids: z.array(uuidish).min(1, "Pilih minimal satu cabang tujuan"),
 });
 export type CreateProductInput = z.infer<typeof createProductSchema>;
 

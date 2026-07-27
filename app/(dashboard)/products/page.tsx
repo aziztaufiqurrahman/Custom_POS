@@ -1,8 +1,9 @@
-import { requireAuth } from "@/lib/auth";
-import { can, isAdmin as isAdminFn } from "@/lib/permissions";
+import { requireMasterAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 import { ProductsClient } from "./products-client";
+
+export type BranchOption = { id: string; name: string };
 
 export type ProductListItem = {
   id: string;
@@ -26,27 +27,24 @@ export type ProductListItem = {
 };
 
 export default async function ProductsPage() {
-  const { profile } = await requireAuth();
-  const admin = isAdminFn(profile);
+  // Katalog global: hanya admin pusat (master admin).
+  await requireMasterAdmin();
   const supabase = await createClient();
 
-  // Admin membaca tabel dasar (termasuk cost_price); kasir membaca view aman.
-  const productsQuery = admin
-    ? supabase
+  const [{ data: products }, { data: categories }, { data: branches }] =
+    await Promise.all([
+      supabase
         .from("products")
         .select("*")
         .is("deleted_at", null)
-        .order("created_at", { ascending: false })
-    : supabase
-        .from("products_public")
-        .select("*")
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false });
-
-  const [{ data: products }, { data: categories }] = await Promise.all([
-    productsQuery,
-    supabase.from("categories").select("id, name").order("name"),
-  ]);
+        .order("created_at", { ascending: false }),
+      supabase.from("categories").select("id, name").order("name"),
+      supabase
+        .from("branches")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name"),
+    ]);
 
   const items: ProductListItem[] = (products ?? []).map((p) => ({
     id: p.id!,
@@ -58,8 +56,7 @@ export default async function ProductsPage() {
     image_url: p.image_url ?? null,
     image_urls: p.image_urls ?? [],
     sell_price: p.sell_price!,
-    cost_price:
-      admin && "cost_price" in p ? (p.cost_price as number | null) : undefined,
+    cost_price: (p.cost_price as number | null) ?? null,
     unit: p.unit!,
     stock: p.stock!,
     min_stock: p.min_stock!,
@@ -74,10 +71,7 @@ export default async function ProductsPage() {
     <ProductsClient
       products={items}
       categories={categories ?? []}
-      isAdmin={admin}
-      canCreate={can(profile, "product.create")}
-      canEdit={can(profile, "product.edit")}
-      canDelete={can(profile, "product.delete")}
+      branches={(branches ?? []) as BranchOption[]}
     />
   );
 }

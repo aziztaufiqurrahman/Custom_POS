@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 
 import { createProduct, updateProduct } from "./actions";
-import type { ProductListItem } from "./page";
+import type { BranchOption, ProductListItem } from "./page";
 import { productInputSchema } from "@/lib/validations/product";
 import { z } from "zod";
 import {
@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/select";
 
 const formSchema = productInputSchema.extend({
-  initial_stock: z.number().min(0),
+  branch_ids: z.array(z.string()),
 });
 type FormValues = z.infer<typeof formSchema>;
 
@@ -48,7 +48,7 @@ export function ProductFormDialog({
   mode,
   product,
   categories,
-  isAdmin,
+  branches,
   open,
   onOpenChange,
   onSaved,
@@ -56,7 +56,7 @@ export function ProductFormDialog({
   mode: "create" | "edit";
   product?: ProductListItem;
   categories: { id: string; name: string }[];
-  isAdmin: boolean;
+  branches: BranchOption[];
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onSaved: () => void;
@@ -82,19 +82,23 @@ export function ProductFormDialog({
       category_id: product?.category_id ?? "",
       description: product?.description ?? "",
       unit: product?.unit ?? "pcs",
-      sell_price: product?.sell_price ?? 0,
-      cost_price: isAdmin ? (product?.cost_price ?? 0) : null,
+      cost_price: product?.cost_price ?? 0,
       min_stock: product?.min_stock ?? 0,
       is_taxable: product?.is_taxable ?? false,
       discount_type: product?.discount_type ?? "none",
       discount_value: product?.discount_value ?? 0,
       supplier: product?.supplier ?? "",
       is_active: product?.is_active ?? true,
-      initial_stock: 0,
+      // Default: produk baru masuk ke SEMUA cabang aktif.
+      branch_ids: mode === "create" ? branches.map((b) => b.id) : [],
     },
   });
 
   function onSubmit(values: FormValues) {
+    if (mode === "create" && values.branch_ids.length === 0) {
+      toast.error("Pilih minimal satu cabang tujuan");
+      return;
+    }
     startTransition(async () => {
       const payload = {
         ...values,
@@ -123,7 +127,8 @@ export function ProductFormDialog({
             {mode === "create" ? "Tambah Produk" : "Edit Produk"}
           </DialogTitle>
           <DialogDescription>
-            Lengkapi data produk. Kolom bertanda * wajib diisi.
+            Lengkapi data katalog. Harga jual &amp; stok awal diatur per cabang
+            di menu Harga &amp; Stok Cabang setelah produk dibuat.
           </DialogDescription>
         </DialogHeader>
 
@@ -204,55 +209,23 @@ export function ProductFormDialog({
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="sell_price">Harga jual (Rp) *</Label>
+              <Label htmlFor="cost_price">Harga modal / HPP (Rp)</Label>
               <Controller
                 control={control}
-                name="sell_price"
+                name="cost_price"
                 render={({ field }) => (
                   <RupiahInput
-                    id="sell_price"
+                    id="cost_price"
                     value={field.value ?? 0}
                     onValueChange={field.onChange}
                     placeholder="0"
                   />
                 )}
               />
-              <FieldError msg={errors.sell_price?.message} />
+              <p className="text-xs text-muted-foreground">
+                Global untuk semua cabang. Tidak pernah terlihat kasir.
+              </p>
             </div>
-
-            {isAdmin && (
-              <div className="grid gap-2">
-                <Label htmlFor="cost_price">Harga modal (Rp)</Label>
-                <Controller
-                  control={control}
-                  name="cost_price"
-                  render={({ field }) => (
-                    <RupiahInput
-                      id="cost_price"
-                      value={field.value ?? 0}
-                      onValueChange={field.onChange}
-                      placeholder="0"
-                    />
-                  )}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Hanya terlihat admin.
-                </p>
-              </div>
-            )}
-
-            {mode === "create" && (
-              <div className="grid gap-2">
-                <Label htmlFor="initial_stock">Stok awal</Label>
-                <Input
-                  id="initial_stock"
-                  type="number"
-                  min={0}
-                  step={1}
-                  {...register("initial_stock", { valueAsNumber: true })}
-                />
-              </div>
-            )}
 
             <div className="grid gap-2">
               <Label htmlFor="min_stock">Stok minimum</Label>
@@ -341,6 +314,62 @@ export function ProductFormDialog({
               )}
             />
           </div>
+
+          {/* Cabang tujuan — hanya saat membuat produk baru. */}
+          {mode === "create" && (
+            <Controller
+              control={control}
+              name="branch_ids"
+              render={({ field }) => {
+                const selected = new Set(field.value);
+                const allChecked = selected.size === branches.length;
+                return (
+                  <div className="grid gap-2 rounded-md border p-3">
+                    <div className="flex items-center justify-between">
+                      <Label>Cabang tujuan *</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          field.onChange(
+                            allChecked ? [] : branches.map((b) => b.id),
+                          )
+                        }
+                      >
+                        {allChecked ? "Kosongkan" : "Pilih semua"}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Produk hanya muncul di cabang yang dicentang (harga &amp;
+                      stok awal 0, diisi kemudian oleh pusat).
+                    </p>
+                    <div className="grid gap-1.5 sm:grid-cols-2">
+                      {branches.map((b) => (
+                        <label
+                          key={b.id}
+                          className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+                        >
+                          <input
+                            type="checkbox"
+                            className="size-4"
+                            checked={selected.has(b.id)}
+                            onChange={(e) => {
+                              const next = new Set(selected);
+                              if (e.target.checked) next.add(b.id);
+                              else next.delete(b.id);
+                              field.onChange([...next]);
+                            }}
+                          />
+                          <span>{b.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }}
+            />
+          )}
 
           <div className="rounded-md border p-3">
             <ProductImageUploader value={images} onChange={setImages} disabled={pending} />

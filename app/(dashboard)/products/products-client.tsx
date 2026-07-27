@@ -16,9 +16,8 @@ import {
 } from "lucide-react";
 
 import { deleteProduct } from "./actions";
-import type { ProductListItem } from "./page";
+import type { BranchOption, ProductListItem } from "./page";
 import { ProductFormDialog } from "./product-form";
-import { formatNumber, formatRupiah } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -54,46 +53,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-type StockStatus = "in" | "low" | "out";
-
-function stockStatus(p: ProductListItem): StockStatus {
-  if (p.stock <= 0) return "out";
-  if (p.stock <= p.min_stock) return "low";
-  return "in";
-}
-
-function StockBadge({ p }: { p: ProductListItem }) {
-  const s = stockStatus(p);
-  if (s === "out") return <Badge variant="destructive">Habis</Badge>;
-  if (s === "low")
-    return (
-      <Badge variant="secondary" className="text-amber-600">
-        Menipis
-      </Badge>
-    );
-  return <Badge variant="outline">Tersedia</Badge>;
-}
-
 export function ProductsClient({
   products,
   categories,
-  isAdmin,
-  canCreate,
-  canEdit,
-  canDelete,
+  branches,
 }: {
   products: ProductListItem[];
   categories: { id: string; name: string }[];
-  isAdmin: boolean;
-  canCreate: boolean;
-  canEdit: boolean;
-  canDelete: boolean;
+  branches: BranchOption[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
-  const [stock, setStock] = useState("all");
   const [view, setView] = useState<"grid" | "table">("grid");
 
   const [formOpen, setFormOpen] = useState(false);
@@ -113,10 +85,9 @@ export function ProductsClient({
         if (!hay.includes(q)) return false;
       }
       if (category !== "all" && p.category_id !== category) return false;
-      if (stock !== "all" && stockStatus(p) !== stock) return false;
       return true;
     });
-  }, [products, query, category, stock]);
+  }, [products, query, category]);
 
   const pg = usePagination(filtered, view === "grid" ? 12 : 20);
 
@@ -153,16 +124,15 @@ export function ProductsClient({
       <Card>
         <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
           <div>
-            <CardTitle>Produk</CardTitle>
+            <CardTitle>Produk (Katalog Pusat)</CardTitle>
             <CardDescription>
-              {products.length} produk terdaftar
+              {products.length} produk terdaftar · harga &amp; stok diatur per
+              cabang di menu <b>Harga &amp; Stok Cabang</b>
             </CardDescription>
           </div>
-          {canCreate && (
-            <Button onClick={openCreate}>
-              <Plus className="size-4" /> Tambah Produk
-            </Button>
-          )}
+          <Button onClick={openCreate}>
+            <Plus className="size-4" /> Tambah Produk
+          </Button>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Toolbar */}
@@ -197,27 +167,6 @@ export function ProductsClient({
                     {c.name}
                   </SelectItem>
                 ))}
-              </SelectContent>
-            </Select>
-            <Select value={stock} onValueChange={(v) => setStock(v ?? "all")}>
-              <SelectTrigger className="sm:w-40">
-                <SelectValue>
-                  {(val: string | null) =>
-                    val === "in"
-                      ? "Tersedia"
-                      : val === "low"
-                        ? "Menipis"
-                        : val === "out"
-                          ? "Habis"
-                          : "Semua stok"
-                  }
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua stok</SelectItem>
-                <SelectItem value="in">Tersedia</SelectItem>
-                <SelectItem value="low">Menipis</SelectItem>
-                <SelectItem value="out">Habis</SelectItem>
               </SelectContent>
             </Select>
             <div className="flex gap-1">
@@ -278,38 +227,28 @@ export function ProductsClient({
                       {p.name}
                     </p>
                     <p className="text-xs text-muted-foreground">{p.sku}</p>
-                    <p className="mt-1 font-semibold">
-                      {formatRupiah(p.sell_price)}
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {p.category_id
+                        ? (categoryName.get(p.category_id) ?? "Tanpa kategori")
+                        : "Tanpa kategori"}
                     </p>
-                    <div className="mt-1 flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Stok {formatNumber(p.stock)} {p.unit}
-                      </span>
-                      <StockBadge p={p} />
+                    <div className="mt-auto flex gap-1 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => openEdit(p)}
+                      >
+                        <Pencil className="size-3.5" /> Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={() => setDeleting(p)}
+                      >
+                        <Trash2 className="size-3.5 text-destructive" />
+                      </Button>
                     </div>
-                    {(canEdit || canDelete) && (
-                      <div className="mt-auto flex gap-1 pt-2">
-                        {canEdit && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => openEdit(p)}
-                          >
-                            <Pencil className="size-3.5" /> Edit
-                          </Button>
-                        )}
-                        {canDelete && (
-                          <Button
-                            variant="outline"
-                            size="icon-sm"
-                            onClick={() => setDeleting(p)}
-                          >
-                            <Trash2 className="size-3.5 text-destructive" />
-                          </Button>
-                        )}
-                      </div>
-                    )}
                   </div>
                 </div>
               ))}
@@ -323,12 +262,9 @@ export function ProductsClient({
                     <TableHead>Nama</TableHead>
                     <TableHead>SKU</TableHead>
                     <TableHead>Kategori</TableHead>
-                    <TableHead className="text-right">Harga</TableHead>
-                    <TableHead className="text-right">Stok</TableHead>
+                    <TableHead>Satuan</TableHead>
                     <TableHead>Status</TableHead>
-                    {(canEdit || canDelete) && (
-                      <TableHead className="w-24">Aksi</TableHead>
-                    )}
+                    <TableHead className="w-24">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -360,39 +296,34 @@ export function ProductsClient({
                           ? (categoryName.get(p.category_id) ?? "-")
                           : "-"}
                       </TableCell>
-                      <TableCell className="text-right">
-                        {formatRupiah(p.sell_price)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatNumber(p.stock)}
+                      <TableCell className="text-muted-foreground">
+                        {p.unit}
                       </TableCell>
                       <TableCell>
-                        <StockBadge p={p} />
+                        {p.is_active ? (
+                          <Badge variant="outline">Aktif</Badge>
+                        ) : (
+                          <Badge variant="secondary">Nonaktif</Badge>
+                        )}
                       </TableCell>
-                      {(canEdit || canDelete) && (
-                        <TableCell>
-                          <div className="flex gap-1">
-                            {canEdit && (
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                onClick={() => openEdit(p)}
-                              >
-                                <Pencil className="size-4" />
-                              </Button>
-                            )}
-                            {canDelete && (
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                onClick={() => setDeleting(p)}
-                              >
-                                <Trash2 className="size-4 text-destructive" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      )}
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => openEdit(p)}
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => setDeleting(p)}
+                          >
+                            <Trash2 className="size-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -417,7 +348,7 @@ export function ProductsClient({
           mode={editing ? "edit" : "create"}
           product={editing}
           categories={categories}
-          isAdmin={isAdmin}
+          branches={branches}
           open={formOpen}
           onOpenChange={setFormOpen}
           onSaved={refresh}
@@ -429,8 +360,8 @@ export function ProductsClient({
           <DialogHeader>
             <DialogTitle>Hapus produk?</DialogTitle>
             <DialogDescription>
-              Produk “{deleting?.name}” akan disembunyikan dari kasir. Histori
-              transaksi tetap tersimpan.
+              Produk “{deleting?.name}” akan disembunyikan dari kasir di semua
+              cabang. Histori transaksi tetap tersimpan.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
