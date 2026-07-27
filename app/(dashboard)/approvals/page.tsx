@@ -3,6 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 
 import { ApprovalsClient } from "./approvals-client";
 
+export type ApprovalPayload = {
+  product_name?: string;
+  old_price?: number;
+  new_price?: number;
+  new_qty?: number;
+} | null;
+
 export type ApprovalRow = {
   id: string;
   branch_id: string;
@@ -15,6 +22,7 @@ export type ApprovalRow = {
   status: "pending" | "approved" | "rejected";
   created_at: string;
   decided_at: string | null;
+  payload: ApprovalPayload;
 };
 
 export default async function ApprovalsPage() {
@@ -61,6 +69,7 @@ export default async function ApprovalsPage() {
     status: a.status,
     created_at: a.created_at,
     decided_at: a.decided_at,
+    payload: (a.payload as ApprovalPayload) ?? null,
   }));
 
   return <ApprovalsClient approvals={approvals} />;

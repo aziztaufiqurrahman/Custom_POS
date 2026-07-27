@@ -76,6 +76,14 @@ export async function decideApproval(
     return { error: "Tidak boleh menyetujui permintaan Anda sendiri" };
   }
 
+  // Perubahan harga cabang hanya boleh diputuskan admin pusat.
+  if (appr.request_type === "price_override") {
+    const ctx = await getBranchContext();
+    if (!ctx.isMasterAdmin) {
+      return { error: "Perubahan harga hanya dapat diputuskan admin pusat" };
+    }
+  }
+
   if (decision === "approved") {
     // Eksekusi aksi yang disetujui.
     if (appr.request_type === "void" && appr.reference_id) {
@@ -90,9 +98,28 @@ export async function decideApproval(
         p_reason: `Disetujui: ${appr.reason ?? "-"}`,
       });
       if (error) return { error: error.message.replace(/^.*?:\s*/, "") };
+    } else if (appr.request_type === "price_override") {
+      // Terapkan harga baru ke cabang ybs (payload: product_id, new_price).
+      const { error } = await supabase.rpc("apply_price_override", {
+        p_approval_id: appr.id,
+      });
+      if (error) return { error: error.message.replace(/^.*?:\s*/, "") };
+    } else if (appr.request_type === "stock_adjustment") {
+      const pl = (appr.payload ?? {}) as {
+        product_id?: string;
+        new_qty?: number;
+      };
+      if (pl.product_id != null && pl.new_qty != null) {
+        const { error } = await supabase.rpc("adjust_stock", {
+          p_product_id: pl.product_id,
+          p_new_qty: pl.new_qty,
+          p_note: `Koreksi disetujui: ${appr.reason ?? "-"}`,
+          p_branch_id: appr.branch_id,
+        });
+        if (error) return { error: error.message.replace(/^.*?:\s*/, "") };
+      }
     }
-    // (discount/price/stock/no_sale = pencatatan persetujuan; aksi dieksekusi
-    //  di titik masing-masing pada fase berikutnya.)
+    // (discount_override / no_sale = pencatatan persetujuan saja.)
   }
 
   const { error: upErr } = await supabase
@@ -124,5 +151,8 @@ export async function decideApproval(
 
   revalidatePath("/approvals");
   revalidatePath("/sales");
+  revalidatePath("/harga-cabang");
+  revalidatePath("/pos");
+  revalidatePath("/inventory");
   return { success: true };
 }

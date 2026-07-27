@@ -8,6 +8,7 @@ import { Check, Clock, X } from "lucide-react";
 import { decideApproval } from "./actions";
 import type { ApprovalRow } from "./page";
 import { formatTanggalWaktu } from "@/lib/date";
+import { formatRupiah } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -32,6 +33,35 @@ const STATUS: Record<string, { label: string; variant: "outline" | "default" | "
   approved: { label: "Disetujui", variant: "default" },
   rejected: { label: "Ditolak", variant: "destructive" },
 };
+
+/** Ringkasan detail usulan (harga/stok) dari payload. */
+function PayloadDetail({ a }: { a: ApprovalRow }) {
+  const p = a.payload;
+  if (!p) return null;
+  if (a.request_type === "price_override" && p.new_price != null) {
+    return (
+      <p className="mt-1 text-sm">
+        <b>{p.product_name ?? "Produk"}</b>:{" "}
+        {p.old_price != null && (
+          <span className="text-muted-foreground line-through">
+            {formatRupiah(p.old_price)}
+          </span>
+        )}{" "}
+        <span className="font-medium text-primary">
+          → {formatRupiah(p.new_price)}
+        </span>
+      </p>
+    );
+  }
+  if (a.request_type === "stock_adjustment" && p.new_qty != null) {
+    return (
+      <p className="mt-1 text-sm">
+        <b>{p.product_name ?? "Produk"}</b>: set stok → {p.new_qty}
+      </p>
+    );
+  }
+  return null;
+}
 
 export function ApprovalsClient({ approvals }: { approvals: ApprovalRow[] }) {
   const router = useRouter();
@@ -104,6 +134,7 @@ export function ApprovalsClient({ approvals }: { approvals: ApprovalRow[] }) {
                     </Button>
                   </div>
                 </div>
+                <PayloadDetail a={a} />
                 <p className="mt-2 text-sm text-muted-foreground">
                   Diminta oleh <b>{a.requested_by_name}</b> · {formatTanggalWaktu(a.created_at)}
                 </p>
