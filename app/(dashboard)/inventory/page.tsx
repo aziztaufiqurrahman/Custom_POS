@@ -1,5 +1,6 @@
-import { requireAuth } from "@/lib/auth";
-import { can, isAdmin as isAdminFn } from "@/lib/permissions";
+import { requireAdmin } from "@/lib/auth";
+import { can } from "@/lib/permissions";
+import { getBranchContext } from "@/lib/branch";
 import { createClient } from "@/lib/supabase/server";
 
 import { InventoryClient } from "./inventory-client";
@@ -32,32 +33,43 @@ export type InvOpname = {
 };
 
 export default async function InventoryPage() {
-  const { profile } = await requireAuth();
-  const admin = isAdminFn(profile);
+  const { profile } = await requireAdmin();
+  const ctx = await getBranchContext();
+  const activeId = ctx.activeBranchId;
   const supabase = await createClient();
 
   const [{ data: products }, { data: movements }, { data: opnames }] =
     await Promise.all([
-      supabase
-        .from("products_public")
-        .select("id, name, sku, stock, min_stock, unit")
-        .is("deleted_at", null)
-        .eq("is_active", true)
-        .order("name"),
-      supabase
-        .from("stock_movements")
-        .select("id, product_id, type, qty_change, stock_after, note, created_at")
-        .order("created_at", { ascending: false })
-        .limit(200),
-      supabase
-        .from("stock_opnames")
-        .select("id, code, status, created_at, completed_at")
-        .order("created_at", { ascending: false })
-        .limit(50),
+      // Stok & katalog PER CABANG aktif (sumber kebenaran branch_products).
+      activeId
+        ? supabase
+            .from("branch_products_public")
+            .select("product_id, name, sku, stock, min_stock, unit")
+            .eq("branch_id", activeId)
+            .eq("is_active", true)
+            .is("deleted_at", null)
+            .order("name")
+        : Promise.resolve({ data: [] }),
+      activeId
+        ? supabase
+            .from("stock_movements")
+            .select("id, product_id, type, qty_change, stock_after, note, created_at")
+            .eq("branch_id", activeId)
+            .order("created_at", { ascending: false })
+            .limit(200)
+        : Promise.resolve({ data: [] }),
+      activeId
+        ? supabase
+            .from("stock_opnames")
+            .select("id, code, status, created_at, completed_at")
+            .eq("branch_id", activeId)
+            .order("created_at", { ascending: false })
+            .limit(50)
+        : Promise.resolve({ data: [] }),
     ]);
 
   const invProducts: InvProduct[] = (products ?? []).map((p) => ({
-    id: p.id!,
+    id: p.product_id!,
     name: p.name!,
     sku: p.sku!,
     stock: p.stock!,
@@ -69,7 +81,7 @@ export default async function InventoryPage() {
 
   const invMovements: InvMovement[] = (movements ?? []).map((m) => ({
     id: m.id,
-    product_name: nameById.get(m.product_id) ?? "(produk dihapus)",
+    product_name: nameById.get(m.product_id) ?? "(produk lain)",
     type: m.type,
     qty_change: m.qty_change,
     stock_after: m.stock_after,
@@ -79,10 +91,11 @@ export default async function InventoryPage() {
 
   return (
     <InventoryClient
+      branchName={ctx.activeBranch?.name ?? "Cabang aktif"}
       products={invProducts}
       movements={invMovements}
       opnames={(opnames ?? []) as InvOpname[]}
-      isAdmin={admin}
+      isMaster={ctx.isMasterAdmin}
       canOpname={can(profile, "stock.opname")}
     />
   );

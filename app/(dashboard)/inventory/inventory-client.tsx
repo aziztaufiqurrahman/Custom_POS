@@ -66,16 +66,18 @@ function stockStatus(p: InvProduct): "in" | "low" | "out" {
 }
 
 export function InventoryClient({
+  branchName,
   products,
   movements,
   opnames,
-  isAdmin,
+  isMaster,
   canOpname,
 }: {
+  branchName: string;
   products: InvProduct[];
   movements: InvMovement[];
   opnames: InvOpname[];
-  isAdmin: boolean;
+  isMaster: boolean;
   canOpname: boolean;
 }) {
   const router = useRouter();
@@ -139,8 +141,12 @@ export function InventoryClient({
       {tab === "stok" && (
         <Card>
           <CardHeader>
-            <CardTitle>Stok Produk</CardTitle>
-            <CardDescription>Pantau & kelola stok.</CardDescription>
+            <CardTitle>Stok Produk — {branchName}</CardTitle>
+            <CardDescription>
+              {isMaster
+                ? "Pantau & kelola stok cabang ini."
+                : "Pantau stok cabang Anda. Tambah stok lewat Gudang; koreksi lewat Stock Opname."}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="relative max-w-sm">
@@ -161,7 +167,7 @@ export function InventoryClient({
                     <TableHead className="text-center">Stok</TableHead>
                     <TableHead className="text-center">Min</TableHead>
                     <TableHead className="text-center">Status</TableHead>
-                    {isAdmin && (
+                    {isMaster && (
                       <TableHead className="w-40 text-center">Aksi</TableHead>
                     )}
                   </TableRow>
@@ -192,7 +198,7 @@ export function InventoryClient({
                             <Badge variant="outline">Tersedia</Badge>
                           )}
                         </TableCell>
-                        {isAdmin && (
+                        {isMaster && (
                           <TableCell>
                             <div className="flex justify-center gap-1">
                               <Button
@@ -455,7 +461,7 @@ function RestockDialog({
           </div>
           <div className="grid gap-2">
             <Label htmlFor="rn">Catatan *</Label>
-            <Input id="rn" value={note} onChange={(e) => setNote(e.target.value)} placeholder="mis. dari supplier X" />
+            <Input id="rn" value={note} onChange={(e) => setNote(e.target.value)} placeholder="mis. kiriman pusat" />
           </div>
         </div>
         <DialogFooter>

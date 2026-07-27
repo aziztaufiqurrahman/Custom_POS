@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 import { GudangClient } from "./gudang-client";
 
 export type WhProduct = { id: string; name: string; unit: string; stock: number };
-export type SupplierOpt = { id: string; name: string };
 export type BranchOpt = { id: string; name: string };
 export type ReceiptRow = { code: string; status: string; received_at: string | null };
 export type WastageRow = { code: string; status: string; reason: string | null; created_at: string };
@@ -26,7 +25,7 @@ export default async function GudangPage() {
   const ctx = await getBranchContext();
   const activeId = ctx.activeBranchId;
 
-  const [{ data: products }, { data: suppliers }, { data: receipts }, { data: wastages }, { data: transfers }] =
+  const [{ data: products }, { data: receipts }, { data: wastages }, { data: transfers }] =
     await Promise.all([
       activeId
         ? supabase
@@ -37,7 +36,6 @@ export default async function GudangPage() {
             .is("deleted_at", null)
             .order("name")
         : Promise.resolve({ data: [] }),
-      supabase.from("suppliers").select("id, name").eq("is_active", true).order("name"),
       activeId
         ? supabase
             .from("goods_receipts")
@@ -89,7 +87,6 @@ export default async function GudangPage() {
       activeBranchId={activeId}
       activeBranchName={ctx.activeBranch?.name ?? "Cabang aktif"}
       products={whProducts}
-      suppliers={(suppliers ?? []) as SupplierOpt[]}
       otherBranches={otherBranches}
       receipts={(receipts ?? []) as ReceiptRow[]}
       wastages={(wastages ?? []) as WastageRow[]}

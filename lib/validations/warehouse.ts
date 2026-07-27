@@ -10,8 +10,8 @@ export const receiptItemSchema = z.object({
   cost_price: z.number().min(0).nullable(),
 });
 
+// Barang masuk = kiriman dari pusat (tanpa supplier).
 export const goodsReceiptSchema = z.object({
-  supplier_id: z.string().uuid().nullable().or(z.literal("")),
   note: z.string().max(200).optional().or(z.literal("")),
   items: z.array(receiptItemSchema).min(1, "Tambahkan minimal 1 item"),
 });
@@ -34,9 +34,3 @@ export const transferSchema = z.object({
   items: z.array(lineItemSchema).min(1, "Tambahkan minimal 1 item"),
 });
 export type TransferInput = z.infer<typeof transferSchema>;
-
-export const supplierSchema = z.object({
-  name: z.string().trim().min(1, "Nama supplier wajib diisi").max(120),
-  phone: z.string().max(30).optional().or(z.literal("")),
-});
-export type SupplierInput = z.infer<typeof supplierSchema>;

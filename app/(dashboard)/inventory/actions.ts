@@ -4,8 +4,9 @@ import { revalidatePath } from "next/cache";
 
 import { getSession } from "@/lib/auth";
 import { getBranchContext } from "@/lib/branch";
-import { can, isAdmin } from "@/lib/permissions";
+import { can } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
+import { notifyRisky } from "@/lib/alerts";
 import type { Json } from "@/types/database";
 import {
   adjustStockSchema,
@@ -22,7 +23,9 @@ function rpcError(msg: string): string {
 
 export async function restockProduct(raw: unknown): Promise<InvResult> {
   const { profile } = await getSession();
-  if (!isAdmin(profile)) return { error: "Hanya admin yang boleh menambah stok" };
+  if (!profile?.is_master_admin) {
+    return { error: "Hanya admin pusat yang boleh menambah stok di sini" };
+  }
 
   const parsed = restockSchema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Input tidak valid" };
@@ -48,7 +51,9 @@ export async function restockProduct(raw: unknown): Promise<InvResult> {
 
 export async function adjustStock(raw: unknown): Promise<InvResult> {
   const { profile } = await getSession();
-  if (!isAdmin(profile)) return { error: "Hanya admin yang boleh menyesuaikan stok" };
+  if (!profile?.is_master_admin) {
+    return { error: "Hanya admin pusat yang boleh menyesuaikan stok" };
+  }
 
   const parsed = adjustStockSchema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Input tidak valid" };
@@ -145,11 +150,24 @@ export async function completeOpname(raw: unknown): Promise<InvResult> {
   const d = parsed.data;
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("complete_opname", {
+  const { data, error } = await supabase.rpc("complete_opname", {
     p_opname_id: d.opname_id,
     p_items: d.items as unknown as Json,
   });
   if (error) return { error: rpcError(error.message) };
+
+  // Peringatan anti-fraud bila ada selisih stok (dipantau pusat & manajer).
+  const changed = (data as { changed?: number } | null)?.changed ?? 0;
+  if (changed > 0) {
+    const ctx = await getBranchContext();
+    if (ctx.activeBranchId) {
+      await notifyRisky({
+        branchId: ctx.activeBranchId,
+        title: "Stock opname dengan selisih",
+        body: `${changed} produk disesuaikan lewat stock opname di ${ctx.activeBranch?.name ?? "cabang"}.`,
+      });
+    }
+  }
 
   revalidatePath("/inventory");
   revalidatePath("/products");

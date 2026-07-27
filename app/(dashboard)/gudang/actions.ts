@@ -9,7 +9,6 @@ import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
 import {
   goodsReceiptSchema,
-  supplierSchema,
   transferSchema,
   wastageSchema,
 } from "@/lib/validations/warehouse";
@@ -36,7 +35,7 @@ export async function receiveGoods(raw: unknown): Promise<WhResult> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("receive_goods", {
     p_branch_id: branch,
-    p_supplier_id: parsed.data.supplier_id || undefined,
+    p_supplier_id: undefined, // barang masuk dari pusat (tanpa supplier)
     p_note: parsed.data.note || undefined,
     p_items: parsed.data.items as unknown as Json,
   });
@@ -116,21 +115,4 @@ export async function receiveTransfer(id: string): Promise<WhResult> {
   revalidatePath("/inventory");
   revalidatePath("/products");
   return { success: true };
-}
-
-export async function createSupplier(raw: unknown): Promise<WhResult> {
-  const { profile } = await getSession();
-  if (!isAdmin(profile)) return { error: "Tidak berwenang" };
-  const parsed = supplierSchema.safeParse(raw);
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Input tidak valid" };
-
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("suppliers")
-    .insert({ name: parsed.data.name, phone: parsed.data.phone || null })
-    .select("id")
-    .single();
-  if (error || !data) return { error: "Gagal menambah supplier" };
-  revalidatePath("/gudang");
-  return { success: true, id: data.id };
 }

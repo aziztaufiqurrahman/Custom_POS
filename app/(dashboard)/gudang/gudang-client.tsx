@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 
 import {
-  createSupplier,
   createTransfer,
   dispatchTransfer,
   receiveGoods,
@@ -24,7 +23,6 @@ import {
 import type {
   BranchOpt,
   ReceiptRow,
-  SupplierOpt,
   TransferRow,
   WastageRow,
   WhProduct,
@@ -170,7 +168,6 @@ export function GudangClient({
   activeBranchId,
   activeBranchName,
   products,
-  suppliers,
   otherBranches,
   receipts,
   wastages,
@@ -179,7 +176,6 @@ export function GudangClient({
   activeBranchId: string | null;
   activeBranchName: string;
   products: WhProduct[];
-  suppliers: SupplierOpt[];
   otherBranches: BranchOpt[];
   receipts: ReceiptRow[];
   wastages: WastageRow[];
@@ -190,8 +186,6 @@ export function GudangClient({
   const [pending, start] = useTransition();
 
   // Penerimaan
-  const [supplierId, setSupplierId] = useState("");
-  const [newSupplier, setNewSupplier] = useState("");
   const [rNote, setRNote] = useState("");
   const [rLines, setRLines] = useState<Line[]>([{ product_id: "", qty: "", cost_price: "" }]);
 
@@ -208,7 +202,7 @@ export function GudangClient({
     const items = toItems(rLines, true);
     if (items.length === 0) return toast.error("Tambahkan item yang valid");
     start(async () => {
-      const res = await receiveGoods({ supplier_id: supplierId || "", note: rNote, items });
+      const res = await receiveGoods({ note: rNote, items });
       if (res.error) {
         toast.error(res.error);
         return;
@@ -216,21 +210,6 @@ export function GudangClient({
       toast.success(`Penerimaan tersimpan (${res.code})`);
       setRLines([{ product_id: "", qty: "", cost_price: "" }]);
       setRNote("");
-      router.refresh();
-    });
-  }
-
-  function addSupplier() {
-    if (!newSupplier.trim()) return;
-    start(async () => {
-      const res = await createSupplier({ name: newSupplier });
-      if (res.error) {
-        toast.error(res.error);
-        return;
-      }
-      toast.success("Supplier ditambahkan");
-      setNewSupplier("");
-      if (res.id) setSupplierId(res.id);
       router.refresh();
     });
   }
@@ -318,40 +297,13 @@ export function GudangClient({
       {tab === "receipt" && (
         <Card>
           <CardHeader>
-            <CardTitle>Penerimaan Barang — {activeBranchName}</CardTitle>
+            <CardTitle>Terima Barang dari Pusat — {activeBranchName}</CardTitle>
             <CardDescription>
-              Barang masuk dari supplier. Stok bertambah; HPP diperbarui bila diisi.
+              Catat barang kiriman dari pusat. Stok cabang bertambah; HPP
+              diperbarui bila diisi.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div className="grid gap-1.5">
-                <Label>Supplier (opsional)</Label>
-                <select
-                  value={supplierId}
-                  onChange={(e) => setSupplierId(e.target.value)}
-                  className="h-9 w-full rounded-md border bg-transparent px-2 text-sm"
-                >
-                  <option value="">— tanpa supplier —</option>
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid gap-1.5">
-                <Label>Tambah supplier baru</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={newSupplier}
-                    onChange={(e) => setNewSupplier(e.target.value)}
-                    placeholder="Nama supplier"
-                  />
-                  <Button type="button" variant="outline" onClick={addSupplier} disabled={pending}>
-                    <Plus className="size-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
             <div className="grid gap-1.5">
               <Label>Item diterima</Label>
               <LineRows products={products} lines={rLines} setLines={setRLines} withCost />
