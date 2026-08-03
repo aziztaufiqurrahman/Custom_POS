@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getBranchContext } from "@/lib/branch";
+import { getBranchContext, MAIN_BRANCH_ID } from "@/lib/branch";
 import { createClient } from "@/lib/supabase/server";
 
 import { InventoryClient } from "./inventory-client";
@@ -35,7 +35,10 @@ export type InvOpname = {
 export default async function InventoryPage() {
   const { profile } = await requireAdmin();
   const ctx = await getBranchContext();
-  const activeId = ctx.activeBranchId;
+  // Inventory DIKUNCI ke Cabang Utama (Pusat) untuk master admin; manajer memakai
+  // cabangnya. Fitur lain (Gudang, POS, dst.) tetap mengikuti switcher cabang.
+  const activeId = ctx.isMasterAdmin ? MAIN_BRANCH_ID : ctx.activeBranchId;
+  const invBranch = ctx.branches.find((b) => b.id === activeId) ?? ctx.activeBranch;
   const supabase = await createClient();
 
   const [{ data: products }, { data: movements }, { data: opnames }] =
@@ -91,7 +94,7 @@ export default async function InventoryPage() {
 
   return (
     <InventoryClient
-      branchName={ctx.activeBranch?.name ?? "Cabang aktif"}
+      branchName={invBranch?.name ?? "Cabang Utama"}
       products={invProducts}
       movements={invMovements}
       opnames={(opnames ?? []) as InvOpname[]}

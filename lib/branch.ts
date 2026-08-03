@@ -83,16 +83,12 @@ export const getBranchContext = cache(async (): Promise<BranchContext> => {
 
   const cookieStore = await cookies();
   const cookieBranch = cookieStore.get(ACTIVE_BRANCH_COOKIE)?.value ?? null;
-  // Master admin (pusat) TERKUNCI ke Cabang Utama — operasi lintas cabang
-  // dilakukan lewat selektor eksplisit di tiap fitur (mis. Harga & Stok Cabang),
-  // bukan via switcher global. Manajer/kasir memakai cabang keanggotaannya.
-  const activeBranchId = isMasterAdmin
-    ? (branches.some((b) => b.id === MAIN_BRANCH_ID)
-        ? MAIN_BRANCH_ID
-        : (branches[0]?.id ?? null))
-    : ((cookieBranch && branches.some((b) => b.id === cookieBranch)
-        ? cookieBranch
-        : branches[0]?.id) ?? null);
+  // Cabang aktif mengikuti switcher (cookie) untuk semua peran. Penguncian ke
+  // Pusat hanya diberlakukan lokal di fitur Inventory (lihat inventory/*).
+  const activeBranchId =
+    (cookieBranch && branches.some((b) => b.id === cookieBranch)
+      ? cookieBranch
+      : branches[0]?.id) ?? null;
   const activeBranch = branches.find((b) => b.id === activeBranchId) ?? null;
 
   return { isMasterAdmin, memberships, branches, activeBranchId, activeBranch };
