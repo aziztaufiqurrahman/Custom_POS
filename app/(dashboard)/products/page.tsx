@@ -31,7 +31,7 @@ export default async function ProductsPage() {
   await requireMasterAdmin();
   const supabase = await createClient();
 
-  const [{ data: products }, { data: categories }, { data: branches }] =
+  const [{ data: products }, { data: categories }, { data: branches }, { data: bpRows }] =
     await Promise.all([
       supabase
         .from("products")
@@ -44,7 +44,22 @@ export default async function ProductsPage() {
         .select("id, name")
         .eq("is_active", true)
         .order("name"),
+      // Sebaran produk per cabang (untuk tooltip "ada di cabang mana saja").
+      supabase
+        .from("branch_products")
+        .select("product_id, is_active, branches(name)")
+        .eq("is_active", true),
     ]);
+
+  // product_id → daftar nama cabang tempat produk tersedia.
+  const branchesByProduct: Record<string, string[]> = {};
+  for (const r of bpRows ?? []) {
+    const rel = (r as { branches: { name: string } | { name: string }[] | null })
+      .branches;
+    const name = Array.isArray(rel) ? rel[0]?.name : rel?.name;
+    if (!name) continue;
+    (branchesByProduct[r.product_id] ??= []).push(name);
+  }
 
   const items: ProductListItem[] = (products ?? []).map((p) => ({
     id: p.id!,
@@ -72,6 +87,7 @@ export default async function ProductsPage() {
       products={items}
       categories={categories ?? []}
       branches={(branches ?? []) as BranchOption[]}
+      branchesByProduct={branchesByProduct}
     />
   );
 }

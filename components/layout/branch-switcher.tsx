@@ -3,7 +3,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, Store } from "lucide-react";
+import { Check, Lock, Store } from "lucide-react";
 
 import { setActiveBranch } from "@/app/(dashboard)/actions";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -21,17 +21,21 @@ import {
  * Bila satu cabang, tampil label statis (cabang terkunci).
  */
 export function BranchSwitcher() {
-  const { branches, activeBranch } = useAuth();
+  const { branches, activeBranch, isMasterAdmin } = useAuth();
   const router = useRouter();
   const [pending, start] = useTransition();
 
   if (branches.length === 0) return null;
 
-  if (branches.length === 1) {
+  // Master admin (pusat) terkunci ke Cabang Utama; kelola cabang lain lewat
+  // fitur Harga & Stok Cabang. Cabang tunggal juga tampil terkunci.
+  if (isMasterAdmin || branches.length === 1) {
+    const name = activeBranch?.name ?? branches[0].name;
     return (
       <div className="hidden items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm text-muted-foreground sm:flex">
         <Store className="size-4" />
-        <span className="max-w-40 truncate">{branches[0].name}</span>
+        <span className="max-w-40 truncate">{name}</span>
+        {isMasterAdmin && <Lock className="size-3 opacity-60" />}
       </div>
     );
   }

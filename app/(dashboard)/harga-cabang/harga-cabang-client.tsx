@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Check, Lock, Search, Send, Store } from "lucide-react";
@@ -64,9 +64,10 @@ export function HargaCabangClient({
   const [pending, start] = useTransition();
   const [savingId, setSavingId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [drafts, setDrafts] = useState<Record<string, Draft>>(() =>
-    Object.fromEntries(
-      rows.map((r) => [
+
+  function buildDrafts(list: BranchProductRow[]): Record<string, Draft> {
+    return Object.fromEntries(
+      list.map((r) => [
         r.product_id,
         {
           price: r.price,
@@ -75,8 +76,16 @@ export function HargaCabangClient({
           is_active: r.is_active,
         },
       ]),
-    ),
+    );
+  }
+  const [drafts, setDrafts] = useState<Record<string, Draft>>(() =>
+    buildDrafts(rows),
   );
+  // Saat ganti cabang / data di-refresh, rows berubah → bangun ulang draft agar
+  // tidak mengakses produk cabang lama (penyebab crash "cannot read price").
+  useEffect(() => {
+    setDrafts(buildDrafts(rows));
+  }, [rows]);
 
   // Dialog pengajuan harga (mode manajer).
   const [proposeFor, setProposeFor] = useState<BranchProductRow | null>(null);
@@ -99,6 +108,7 @@ export function HargaCabangClient({
 
   function dirty(r: BranchProductRow): boolean {
     const d = drafts[r.product_id];
+    if (!d) return false;
     return (
       d.price !== r.price ||
       Number(d.stock) !== r.stock ||
@@ -221,7 +231,12 @@ export function HargaCabangClient({
             </thead>
             <tbody>
               {pg.pageItems.map((r) => {
-                const d = drafts[r.product_id];
+                const d = drafts[r.product_id] ?? {
+                  price: r.price,
+                  stock: String(r.stock),
+                  min_stock: String(r.min_stock),
+                  is_active: r.is_active,
+                };
                 const isDirty = dirty(r);
                 const proposed = pendingPrice[r.product_id];
                 return (

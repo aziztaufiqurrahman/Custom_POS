@@ -1,5 +1,5 @@
 import { requireAuth } from "@/lib/auth";
-import { isAdmin as isAdminFn } from "@/lib/permissions";
+import { getBranchContext } from "@/lib/branch";
 import { createClient } from "@/lib/supabase/server";
 import type { PaymentBreakdown } from "@/lib/shift";
 
@@ -15,6 +15,7 @@ export type ActiveShift = {
 export type ShiftHistoryItem = {
   id: string;
   cashier_name: string;
+  branch_name: string;
   opened_at: string;
   closed_at: string | null;
   opening_balance: number;
@@ -30,8 +31,13 @@ export type ShiftHistoryItem = {
 };
 
 export default async function ShiftsPage() {
-  const { userId, profile } = await requireAuth();
-  const admin = isAdminFn(profile);
+  const { userId } = await requireAuth();
+  const ctx = await getBranchContext();
+  const isMaster = ctx.isMasterAdmin;
+  const isManager = ctx.memberships.some((m) => m.role === "manager");
+  // Master admin melihat SEMUA cabang; manajer melihat cabangnya; kasir hanya
+  // shift miliknya sendiri.
+  const canSeeBranch = isMaster || isManager;
   const supabase = await createClient();
 
   const { data: active } = await supabase
@@ -51,11 +57,20 @@ export default async function ShiftsPage() {
 
   let historyQuery = supabase
     .from("cash_sessions")
-    .select("*, cashier:profiles(full_name)")
+    .select("*, cashier:profiles(full_name), branch:branches(name)")
     .eq("status", "closed")
     .order("closed_at", { ascending: false })
     .limit(50);
-  if (!admin) historyQuery = historyQuery.eq("cashier_id", userId);
+  if (isMaster) {
+    // semua cabang
+  } else if (isManager) {
+    historyQuery = historyQuery.in(
+      "branch_id",
+      ctx.branches.map((b) => b.id),
+    );
+  } else {
+    historyQuery = historyQuery.eq("cashier_id", userId);
+  }
   const { data: history } = await historyQuery;
 
   const historyItems: ShiftHistoryItem[] = (history ?? []).map((h) => {
@@ -63,9 +78,14 @@ export default async function ShiftsPage() {
     const name = Array.isArray(cashier)
       ? (cashier[0]?.full_name ?? "-")
       : (cashier?.full_name ?? "-");
+    const branch = h.branch as { name: string } | { name: string }[] | null;
+    const branchName = Array.isArray(branch)
+      ? (branch[0]?.name ?? "-")
+      : (branch?.name ?? "-");
     return {
       id: h.id,
       cashier_name: name,
+      branch_name: branchName,
       opened_at: h.opened_at,
       closed_at: h.closed_at,
       opening_balance: h.opening_balance,
@@ -87,7 +107,8 @@ export default async function ShiftsPage() {
       activeBreakdown={activeBreakdown}
       activeExpenses={activeExpenses}
       history={historyItems}
-      isAdmin={admin}
+      isAdmin={canSeeBranch}
+      showBranch={isMaster}
     />
   );
 }

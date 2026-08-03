@@ -124,8 +124,11 @@ function LineRows({
             type="button"
             variant="ghost"
             size="icon"
-            onClick={() => setLines(lines.filter((_, idx) => idx !== i))}
-            disabled={lines.length === 1}
+            onClick={() => {
+              const next = lines.filter((_, idx) => idx !== i);
+              // Selalu sisakan minimal satu baris kosong agar form tetap bisa diisi.
+              setLines(next.length ? next : [{ product_id: "", qty: "" }]);
+            }}
           >
             <Trash2 className="size-4 text-destructive" />
           </Button>

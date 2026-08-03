@@ -701,12 +701,14 @@ export function ShiftsClient({
   activeExpenses,
   history,
   isAdmin,
+  showBranch = false,
 }: {
   active: ActiveShift | null;
   activeBreakdown: PaymentBreakdown | null;
   activeExpenses: SessionExpenses | null;
   history: ShiftHistoryItem[];
   isAdmin: boolean;
+  showBranch?: boolean;
 }) {
   const router = useRouter();
   const [detail, setDetail] = useState<ShiftHistoryItem | null>(null);
@@ -740,7 +742,12 @@ export function ShiftsClient({
           <div>
             <CardTitle>Riwayat Shift</CardTitle>
             <CardDescription>
-              {history.length} shift {isAdmin ? "(semua kasir)" : "Anda"}
+              {history.length} shift{" "}
+              {showBranch
+                ? "(semua cabang)"
+                : isAdmin
+                  ? "(cabang Anda)"
+                  : "(milik Anda)"}
             </CardDescription>
           </div>
           {history.length > 0 && (
@@ -759,6 +766,7 @@ export function ShiftsClient({
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {showBranch && <TableHead>Cabang</TableHead>}
                     {isAdmin && <TableHead>Kasir</TableHead>}
                     <TableHead>Ditutup</TableHead>
                     <TableHead className="text-right">Uang Awal</TableHead>
@@ -774,6 +782,11 @@ export function ShiftsClient({
                       className="cursor-pointer"
                       onClick={() => setDetail(h)}
                     >
+                      {showBranch && (
+                        <TableCell className="text-muted-foreground">
+                          {h.branch_name}
+                        </TableCell>
+                      )}
                       {isAdmin && <TableCell>{h.cashier_name}</TableCell>}
                       <TableCell>
                         {h.closed_at ? formatTanggalWaktu(h.closed_at) : "-"}

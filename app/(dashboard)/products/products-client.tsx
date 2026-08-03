@@ -8,6 +8,7 @@ import {
   ImageIcon,
   LayoutGrid,
   List,
+  MapPin,
   Package,
   Pencil,
   Plus,
@@ -53,14 +54,32 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+/** Ikon lokasi + tooltip (hover) berisi daftar cabang tempat produk tersedia. */
+function BranchPin({ names }: { names: string[] }) {
+  const title = names.length
+    ? `Tersedia di: ${names.join(", ")}`
+    : "Belum tersedia di cabang manapun";
+  return (
+    <span
+      title={title}
+      className="inline-flex cursor-default items-center gap-0.5 text-xs text-muted-foreground"
+    >
+      <MapPin className="size-3.5" />
+      {names.length}
+    </span>
+  );
+}
+
 export function ProductsClient({
   products,
   categories,
   branches,
+  branchesByProduct,
 }: {
   products: ProductListItem[];
   categories: { id: string; name: string }[];
   branches: BranchOption[];
+  branchesByProduct: Record<string, string[]>;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -227,11 +246,14 @@ export function ProductsClient({
                       {p.name}
                     </p>
                     <p className="text-xs text-muted-foreground">{p.sku}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {p.category_id
-                        ? (categoryName.get(p.category_id) ?? "Tanpa kategori")
-                        : "Tanpa kategori"}
-                    </p>
+                    <div className="mt-1 flex items-center justify-between">
+                      <p className="text-xs text-muted-foreground">
+                        {p.category_id
+                          ? (categoryName.get(p.category_id) ?? "Tanpa kategori")
+                          : "Tanpa kategori"}
+                      </p>
+                      <BranchPin names={branchesByProduct[p.id] ?? []} />
+                    </div>
                     <div className="mt-auto flex gap-1 pt-2">
                       <Button
                         variant="outline"
@@ -261,6 +283,7 @@ export function ProductsClient({
                     <TableHead className="w-12" />
                     <TableHead>Nama</TableHead>
                     <TableHead>SKU</TableHead>
+                    <TableHead className="text-center">Cabang</TableHead>
                     <TableHead>Kategori</TableHead>
                     <TableHead>Satuan</TableHead>
                     <TableHead>Status</TableHead>
@@ -290,6 +313,9 @@ export function ProductsClient({
                       <TableCell className="font-medium">{p.name}</TableCell>
                       <TableCell className="text-muted-foreground">
                         {p.sku}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <BranchPin names={branchesByProduct[p.id] ?? []} />
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {p.category_id

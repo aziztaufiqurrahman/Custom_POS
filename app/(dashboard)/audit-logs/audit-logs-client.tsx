@@ -86,10 +86,23 @@ const ACTION_LABELS: Record<string, string> = {
   "product.update": "Ubah produk",
   "product.delete": "Hapus produk",
   "stock.restock": "Barang masuk",
+  "stock.receive": "Barang masuk (Gudang)",
   "stock.adjust": "Koreksi stok",
+  "stock.wastage": "Barang rusak",
+  "stock.wastage_request": "Ajukan barang rusak",
   "stock.opname_complete": "Opname selesai",
+  "transfer.create": "Buat transfer stok",
+  "transfer.dispatch": "Kirim transfer stok",
+  "transfer.receive": "Terima transfer stok",
+  "branch_product.set": "Set harga & stok cabang",
+  "branch_product.price_request": "Ajukan perubahan harga cabang",
+  "branch_product.price_override": "Harga cabang diubah (disetujui)",
+  "approval.approve": "Setujui permintaan",
+  "approval.reject": "Tolak permintaan",
   "shift.open": "Buka shift",
   "shift.close": "Tutup shift",
+  "shift.expense_add": "Catat pengeluaran kas",
+  "shift.expense_delete": "Hapus pengeluaran kas",
   "sale.create": "Penjualan",
   "sale.void": "Void transaksi",
   "sale.refund": "Refund transaksi",
@@ -98,6 +111,33 @@ const ACTION_LABELS: Record<string, string> = {
   "settings.bank_update": "Ubah rekening",
   "settings.qris_update": "Ubah QRIS",
 };
+
+const ENTITY_LABELS: Record<string, string> = {
+  product: "Produk",
+  branch_product: "Harga/stok cabang",
+  transaction: "Transaksi",
+  goods_receipt: "Penerimaan barang",
+  wastage: "Barang rusak",
+  stock_transfer: "Transfer stok",
+  stock_opname: "Stok opname",
+  cash_session: "Shift kas",
+  cash_expense: "Pengeluaran kas",
+  approval: "Persetujuan",
+  employee: "Karyawan",
+  profile: "Karyawan",
+};
+
+/** Label aksi ramah; fallback: ubah "a.b_c" → "A b c" agar tak ada string mentah. */
+function actionLabel(action: string): string {
+  if (ACTION_LABELS[action]) return ACTION_LABELS[action];
+  const words = action.replace(/[._]/g, " ").trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+function entityLabel(entity: string | null): string {
+  if (!entity) return "-";
+  return ENTITY_LABELS[entity] ?? entity;
+}
 
 export function AuditLogsClient({
   rows,
@@ -176,9 +216,9 @@ export function AuditLogsClient({
                     </TableCell>
                     <TableCell>{r.actor_name}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{ACTION_LABELS[r.action] ?? r.action}</Badge>
+                      <Badge variant="outline">{actionLabel(r.action)}</Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{r.entity ?? "-"}</TableCell>
+                    <TableCell className="text-muted-foreground">{entityLabel(r.entity)}</TableCell>
                     <TableCell className="max-w-80 text-xs text-muted-foreground">
                       {formatMetadata(r.metadata)}
                     </TableCell>

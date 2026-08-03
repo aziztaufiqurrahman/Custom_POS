@@ -4,16 +4,15 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { AlertTriangle, ClipboardList, PackagePlus, Plus, Search, SlidersHorizontal } from "lucide-react";
+import { AlertTriangle, ClipboardList, Plus, Search, SlidersHorizontal } from "lucide-react";
 
-import { adjustStock, createOpname, restockProduct } from "./actions";
+import { adjustStock, createOpname } from "./actions";
 import type { InvMovement, InvOpname, InvProduct } from "./page";
 import { formatNumber } from "@/lib/format";
 import { formatTanggalRingkas } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { RupiahInput } from "@/components/ui/rupiah-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -84,7 +83,6 @@ export function InventoryClient({
   const [tab, setTab] = useState<Tab>("stok");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [restockTarget, setRestockTarget] = useState<InvProduct | null>(null);
   const [adjustTarget, setAdjustTarget] = useState<InvProduct | null>(null);
   const [pending, start] = useTransition();
 
@@ -204,16 +202,9 @@ export function InventoryClient({
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setRestockTarget(p)}
-                              >
-                                <PackagePlus className="size-3.5" /> Masuk
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
                                 onClick={() => setAdjustTarget(p)}
                               >
-                                <SlidersHorizontal className="size-3.5" />
+                                <SlidersHorizontal className="size-3.5" /> Koreksi
                               </Button>
                             </div>
                           </TableCell>
@@ -363,16 +354,6 @@ export function InventoryClient({
         </Card>
       )}
 
-      {restockTarget && (
-        <RestockDialog
-          product={restockTarget}
-          onOpenChange={(o) => !o && setRestockTarget(null)}
-          onDone={() => {
-            setRestockTarget(null);
-            router.refresh();
-          }}
-        />
-      )}
       {adjustTarget && (
         <AdjustDialog
           product={adjustTarget}
@@ -407,70 +388,6 @@ function TabButton({
     >
       {children}
     </button>
-  );
-}
-
-function RestockDialog({
-  product,
-  onOpenChange,
-  onDone,
-}: {
-  product: InvProduct;
-  onOpenChange: (o: boolean) => void;
-  onDone: () => void;
-}) {
-  const [qty, setQty] = useState("");
-  const [cost, setCost] = useState(0);
-  const [note, setNote] = useState("");
-  const [pending, start] = useTransition();
-
-  function submit() {
-    start(async () => {
-      const res = await restockProduct({
-        product_id: product.id,
-        qty: Number(qty) || 0,
-        new_cost: cost > 0 ? cost : null,
-        note,
-      });
-      if (res.error) {
-        toast.error(res.error);
-        return;
-      }
-      toast.success("Stok bertambah");
-      onDone();
-    });
-  }
-
-  return (
-    <Dialog open onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Barang Masuk</DialogTitle>
-          <DialogDescription>
-            {product.name} · stok saat ini {formatNumber(product.stock)} {product.unit}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div className="grid gap-2">
-            <Label htmlFor="rq">Jumlah masuk</Label>
-            <Input id="rq" type="number" min={0} value={qty} onChange={(e) => setQty(e.target.value)} />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="rc">Harga modal baru (opsional)</Label>
-            <RupiahInput id="rc" value={cost} onValueChange={setCost} placeholder="Biarkan kosong jika tetap" />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="rn">Catatan *</Label>
-            <Input id="rn" value={note} onChange={(e) => setNote(e.target.value)} placeholder="mis. kiriman pusat" />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button onClick={submit} disabled={pending || !qty || !note.trim()}>
-            {pending ? "Menyimpan…" : "Simpan"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 

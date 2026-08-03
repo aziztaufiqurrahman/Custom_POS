@@ -8,6 +8,8 @@ import { createClient } from "@/lib/supabase/server";
 import type { BranchRole } from "@/lib/constants";
 
 export const ACTIVE_BRANCH_COOKIE = "pos_active_branch";
+/** Cabang Utama (Pusat) — id tetap. */
+export const MAIN_BRANCH_ID = "00000000-0000-0000-0000-0000000000c1";
 
 export type BranchLite = {
   id: string;
@@ -81,10 +83,16 @@ export const getBranchContext = cache(async (): Promise<BranchContext> => {
 
   const cookieStore = await cookies();
   const cookieBranch = cookieStore.get(ACTIVE_BRANCH_COOKIE)?.value ?? null;
-  const activeBranchId =
-    (cookieBranch && branches.some((b) => b.id === cookieBranch)
-      ? cookieBranch
-      : branches[0]?.id) ?? null;
+  // Master admin (pusat) TERKUNCI ke Cabang Utama — operasi lintas cabang
+  // dilakukan lewat selektor eksplisit di tiap fitur (mis. Harga & Stok Cabang),
+  // bukan via switcher global. Manajer/kasir memakai cabang keanggotaannya.
+  const activeBranchId = isMasterAdmin
+    ? (branches.some((b) => b.id === MAIN_BRANCH_ID)
+        ? MAIN_BRANCH_ID
+        : (branches[0]?.id ?? null))
+    : ((cookieBranch && branches.some((b) => b.id === cookieBranch)
+        ? cookieBranch
+        : branches[0]?.id) ?? null);
   const activeBranch = branches.find((b) => b.id === activeBranchId) ?? null;
 
   return { isMasterAdmin, memberships, branches, activeBranchId, activeBranch };

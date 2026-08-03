@@ -25,7 +25,7 @@ export default async function GudangPage() {
   const ctx = await getBranchContext();
   const activeId = ctx.activeBranchId;
 
-  const [{ data: products }, { data: receipts }, { data: wastages }, { data: transfers }] =
+  const [{ data: products }, { data: allBranches }, { data: receipts }, { data: wastages }, { data: transfers }] =
     await Promise.all([
       activeId
         ? supabase
@@ -36,6 +36,12 @@ export default async function GudangPage() {
             .is("deleted_at", null)
             .order("name")
         : Promise.resolve({ data: [] }),
+      // Semua cabang aktif = kandidat tujuan transfer (termasuk Pusat).
+      supabase
+        .from("branches")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name"),
       activeId
         ? supabase
             .from("goods_receipts")
@@ -59,7 +65,8 @@ export default async function GudangPage() {
         .limit(20),
     ]);
 
-  const branchName = new Map(ctx.branches.map((b) => [b.id, b.name]));
+  const branchList = (allBranches ?? []) as BranchOpt[];
+  const branchName = new Map(branchList.map((b) => [b.id, b.name]));
   const whProducts: WhProduct[] = (products ?? []).map((p) => ({
     id: p.product_id!,
     name: p.name!,
@@ -78,7 +85,8 @@ export default async function GudangPage() {
     created_at: t.created_at,
   }));
 
-  const otherBranches: BranchOpt[] = ctx.branches
+  // Tujuan transfer = semua cabang lain (bisa cabang→pusat maupun pusat→cabang).
+  const otherBranches: BranchOpt[] = branchList
     .filter((b) => b.id !== activeId)
     .map((b) => ({ id: b.id, name: b.name }));
 
