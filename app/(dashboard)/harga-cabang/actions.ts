@@ -15,23 +15,23 @@ export type BranchPriceResult = {
   pending?: boolean;
 };
 
-// ── PUSAT: set harga + stok awal per cabang (master admin) ───────────────────
+// ── PUSAT: set harga jual, stok minimum, & status aktif per cabang ───────────
+// Stok TIDAK diubah di sini — keluar/masuk stok hanya lewat Gudang & Inventory.
 const setSchema = z.object({
   branch_id: uuidish,
   product_id: z.string().uuid(),
   price: z.number().min(0, "Harga tidak boleh negatif"),
-  stock: z.number().min(0, "Stok tidak boleh negatif"),
   min_stock: z.number().min(0, "Tidak boleh negatif"),
   is_active: z.boolean(),
 });
 
-export async function setBranchPriceStock(
+export async function setBranchPrice(
   raw: unknown,
 ): Promise<BranchPriceResult> {
   const { profile } = await getSession();
   if (!profile) return { error: "Tidak terautentikasi" };
   if (!profile.is_master_admin) {
-    return { error: "Hanya admin pusat yang dapat mengatur harga & stok cabang" };
+    return { error: "Hanya admin pusat yang dapat mengatur harga cabang" };
   }
   const parsed = setSchema.safeParse(raw);
   if (!parsed.success) {
@@ -40,19 +40,24 @@ export async function setBranchPriceStock(
   const d = parsed.data;
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("set_branch_price_stock", {
-    p_branch_id: d.branch_id,
-    p_product_id: d.product_id,
-    p_price: d.price,
-    p_stock: d.stock,
-    p_min_stock: d.min_stock,
-    p_is_active: d.is_active,
+  // Update langsung (RLS: master admin) — hanya harga/min/aktif, stok utuh.
+  const { error } = await supabase
+    .from("branch_products")
+    .update({ price: d.price, min_stock: d.min_stock, is_active: d.is_active })
+    .eq("branch_id", d.branch_id)
+    .eq("product_id", d.product_id);
+  if (error) return { error: "Gagal menyimpan harga cabang" };
+
+  await logAudit({
+    action: "branch_product.set",
+    entity: "branch_product",
+    entityId: d.product_id,
+    branchId: d.branch_id,
+    metadata: { price: d.price, min_stock: d.min_stock, is_active: d.is_active },
   });
-  if (error) return { error: error.message.replace(/^.*?:\s*/, "") };
 
   revalidatePath("/harga-cabang");
   revalidatePath("/pos");
-  revalidatePath("/inventory");
   return { success: true };
 }
 

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Check, Lock, Search, Send, Store } from "lucide-react";
 
-import { requestPriceChange, setBranchPriceStock } from "./actions";
+import { requestPriceChange, setBranchPrice } from "./actions";
 import type { BranchProductRow } from "./page";
 import { formatNumber, formatRupiah } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -42,7 +42,6 @@ import {
 
 type Draft = {
   price: number;
-  stock: string;
   min_stock: string;
   is_active: boolean;
 };
@@ -71,7 +70,6 @@ export function HargaCabangClient({
         r.product_id,
         {
           price: r.price,
-          stock: String(r.stock),
           min_stock: String(r.min_stock),
           is_active: r.is_active,
         },
@@ -111,7 +109,6 @@ export function HargaCabangClient({
     if (!d) return false;
     return (
       d.price !== r.price ||
-      Number(d.stock) !== r.stock ||
       Number(d.min_stock) !== r.min_stock ||
       d.is_active !== r.is_active
     );
@@ -126,11 +123,10 @@ export function HargaCabangClient({
     const d = drafts[r.product_id];
     setSavingId(r.product_id);
     start(async () => {
-      const res = await setBranchPriceStock({
+      const res = await setBranchPrice({
         branch_id: selectedBranchId,
         product_id: r.product_id,
         price: d.price,
-        stock: Number(d.stock) || 0,
         min_stock: Number(d.min_stock) || 0,
         is_active: d.is_active,
       });
@@ -177,7 +173,7 @@ export function HargaCabangClient({
         </CardTitle>
         <CardDescription>
           {isMaster
-            ? "Pilih cabang, lalu atur harga jual & stok awal per produk. Setiap cabang berdiri sendiri."
+            ? "Pilih cabang, lalu atur harga jual, stok minimum & status per produk. Stok (kolom Stok) terkunci — keluar/masuk lewat Gudang & Inventory."
             : "Harga berjalan terkunci. Ajukan perubahan harga; berlaku setelah disetujui pusat."}
         </CardDescription>
       </CardHeader>
@@ -233,7 +229,6 @@ export function HargaCabangClient({
               {pg.pageItems.map((r) => {
                 const d = drafts[r.product_id] ?? {
                   price: r.price,
-                  stock: String(r.stock),
                   min_stock: String(r.min_stock),
                   is_active: r.is_active,
                 };
@@ -255,16 +250,8 @@ export function HargaCabangClient({
                             className="h-8 w-32"
                           />
                         </td>
-                        <td className="py-2 pr-2">
-                          <Input
-                            type="number"
-                            min={0}
-                            value={d.stock}
-                            onChange={(e) =>
-                              patch(r.product_id, { stock: e.target.value })
-                            }
-                            className="h-8 w-24"
-                          />
+                        <td className="py-2 pr-2 text-muted-foreground">
+                          {formatNumber(r.stock)} {r.unit}
                         </td>
                         <td className="py-2 pr-2">
                           <Input
