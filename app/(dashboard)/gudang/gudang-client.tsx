@@ -165,6 +165,8 @@ const STATUS_BADGE: Record<string, { label: string; variant: "outline" | "defaul
   received: { label: "Diterima", variant: "outline" },
   cancelled: { label: "Batal", variant: "destructive" },
   approved: { label: "Selesai", variant: "outline" },
+  pending_approval: { label: "Menunggu persetujuan", variant: "secondary" },
+  rejected: { label: "Ditolak", variant: "destructive" },
 };
 
 export function GudangClient({
@@ -227,7 +229,11 @@ export function GudangClient({
         toast.error(res.error);
         return;
       }
-      toast.success(`Barang rusak tercatat (${res.code})`);
+      toast.success(
+        res.pending
+          ? `Barang rusak diajukan (${res.code}), menunggu persetujuan admin pusat`
+          : `Barang rusak tercatat (${res.code})`,
+      );
       setWLines([{ product_id: "", qty: "" }]);
       setReason("");
       router.refresh();
@@ -337,7 +343,8 @@ export function GudangClient({
           <CardHeader>
             <CardTitle>Barang Rusak — {activeBranchName}</CardTitle>
             <CardDescription>
-              Catat barang rusak/hilang. Stok berkurang sesuai jumlah.
+              Catat barang rusak/hilang. Pengajuan cabang menunggu persetujuan
+              admin pusat sebelum stok berkurang.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

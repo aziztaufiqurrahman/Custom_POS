@@ -26,6 +26,7 @@ const TYPE_LABEL: Record<string, string> = {
   price_override: "Override harga",
   stock_adjustment: "Penyesuaian stok",
   no_sale: "Buka laci (no-sale)",
+  wastage: "Barang rusak",
 };
 
 const STATUS: Record<string, { label: string; variant: "outline" | "default" | "destructive" | "secondary" }> = {
@@ -57,6 +58,15 @@ function PayloadDetail({ a }: { a: ApprovalRow }) {
     return (
       <p className="mt-1 text-sm">
         <b>{p.product_name ?? "Produk"}</b>: set stok → {p.new_qty}
+      </p>
+    );
+  }
+  if (a.request_type === "wastage") {
+    const count = p.items?.length ?? 0;
+    return (
+      <p className="mt-1 text-sm">
+        {p.wastage_code ? <span className="font-mono text-xs">{p.wastage_code} · </span> : null}
+        <b>{count}</b> produk akan dikurangi stoknya bila disetujui
       </p>
     );
   }

@@ -1813,6 +1813,12 @@ export type Database = {
         Returns: Json
       }
       apply_price_override: { Args: { p_approval_id: string }; Returns: Json }
+      request_wastage: {
+        Args: { p_branch_id: string; p_reason: string; p_items: Json }
+        Returns: Json
+      }
+      approve_wastage: { Args: { p_wastage_id: string }; Returns: Json }
+      reject_wastage: { Args: { p_wastage_id: string }; Returns: Json }
       branch_seq_gaps: {
         Args: never
         Returns: {
@@ -1936,6 +1942,7 @@ export type Database = {
         | "price_override"
         | "stock_adjustment"
         | "no_sale"
+        | "wastage"
       bank_code: "BNI" | "BCA" | "BSI"
       branch_role: "manager" | "cashier"
       cash_movement_type: "drop" | "pettycash_out" | "expense" | "float_in"
@@ -2094,6 +2101,7 @@ export const Constants = {
         "price_override",
         "stock_adjustment",
         "no_sale",
+        "wastage",
       ],
       bank_code: ["BNI", "BCA", "BSI"],
       branch_role: ["manager", "cashier"],

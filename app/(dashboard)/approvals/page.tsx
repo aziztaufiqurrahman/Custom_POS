@@ -8,6 +8,8 @@ export type ApprovalPayload = {
   old_price?: number;
   new_price?: number;
   new_qty?: number;
+  wastage_code?: string;
+  items?: { product_id: string; qty: number }[];
 } | null;
 
 export type ApprovalRow = {

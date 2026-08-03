@@ -76,11 +76,16 @@ export async function decideApproval(
     return { error: "Tidak boleh menyetujui permintaan Anda sendiri" };
   }
 
-  // Perubahan harga cabang hanya boleh diputuskan admin pusat.
-  if (appr.request_type === "price_override") {
+  // Perubahan harga cabang & barang rusak hanya boleh diputuskan admin pusat.
+  if (appr.request_type === "price_override" || appr.request_type === "wastage") {
     const ctx = await getBranchContext();
     if (!ctx.isMasterAdmin) {
-      return { error: "Perubahan harga hanya dapat diputuskan admin pusat" };
+      return {
+        error:
+          appr.request_type === "wastage"
+            ? "Barang rusak hanya dapat disetujui admin pusat"
+            : "Perubahan harga hanya dapat diputuskan admin pusat",
+      };
     }
   }
 
@@ -118,8 +123,20 @@ export async function decideApproval(
         });
         if (error) return { error: error.message.replace(/^.*?:\s*/, "") };
       }
+    } else if (appr.request_type === "wastage" && appr.reference_id) {
+      // Barang rusak disetujui → kurangi stok cabang sekarang.
+      const { error } = await supabase.rpc("approve_wastage", {
+        p_wastage_id: appr.reference_id,
+      });
+      if (error) return { error: error.message.replace(/^.*?:\s*/, "") };
     }
     // (discount_override / no_sale = pencatatan persetujuan saja.)
+  } else if (decision === "rejected" && appr.request_type === "wastage" && appr.reference_id) {
+    // Barang rusak ditolak → batalkan (stok tidak berubah).
+    const { error } = await supabase.rpc("reject_wastage", {
+      p_wastage_id: appr.reference_id,
+    });
+    if (error) return { error: error.message.replace(/^.*?:\s*/, "") };
   }
 
   const { error: upErr } = await supabase
@@ -154,5 +171,6 @@ export async function decideApproval(
   revalidatePath("/harga-cabang");
   revalidatePath("/pos");
   revalidatePath("/inventory");
+  revalidatePath("/gudang");
   return { success: true };
 }
