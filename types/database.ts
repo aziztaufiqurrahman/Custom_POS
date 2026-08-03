@@ -857,7 +857,7 @@ export type Database = {
         }
         Insert: {
           amount: number
-          bank?: Database["public"]["Enums"]["bank_code"] | null
+          bank?: string | null
           branch_id?: string
           cash_received?: number | null
           change_given?: number | null
@@ -869,7 +869,7 @@ export type Database = {
         }
         Update: {
           amount?: number
-          bank?: Database["public"]["Enums"]["bank_code"] | null
+          bank?: string | null
           branch_id?: string
           cash_received?: number | null
           change_given?: number | null
@@ -1816,12 +1816,7 @@ export type Database = {
         Returns: Json
       }
       apply_price_override: { Args: { p_approval_id: string }; Returns: Json }
-      request_wastage: {
-        Args: { p_branch_id: string; p_reason: string; p_items: Json }
-        Returns: Json
-      }
       approve_wastage: { Args: { p_wastage_id: string }; Returns: Json }
-      reject_wastage: { Args: { p_wastage_id: string }; Returns: Json }
       branch_seq_gaps: {
         Args: never
         Returns: {
@@ -1907,6 +1902,11 @@ export type Database = {
         Args: { p_reason?: string; p_transaction_id: string }
         Returns: Json
       }
+      reject_wastage: { Args: { p_wastage_id: string }; Returns: Json }
+      request_wastage: {
+        Args: { p_branch_id: string; p_items: Json; p_reason: string }
+        Returns: Json
+      }
       restock_product: {
         Args: {
           p_branch_id?: string
@@ -1963,7 +1963,13 @@ export type Database = {
         | "transfer_in"
         | "wastage"
       opname_status: "draft" | "completed"
-      payment_method: "cash" | "qris" | "transfer" | "gofood" | "shopeefood" | "grabfood"
+      payment_method:
+        | "cash"
+        | "qris"
+        | "transfer"
+        | "gofood"
+        | "shopeefood"
+        | "grabfood"
       session_status: "open" | "closed"
       transaction_status: "completed" | "void" | "refunded"
       transfer_status: "draft" | "dispatched" | "received" | "cancelled"
@@ -2124,7 +2130,14 @@ export const Constants = {
         "wastage",
       ],
       opname_status: ["draft", "completed"],
-      payment_method: ["cash", "qris", "transfer", "gofood", "shopeefood", "grabfood"],
+      payment_method: [
+        "cash",
+        "qris",
+        "transfer",
+        "gofood",
+        "shopeefood",
+        "grabfood",
+      ],
       session_status: ["open", "closed"],
       transaction_status: ["completed", "void", "refunded"],
       transfer_status: ["draft", "dispatched", "received", "cancelled"],
