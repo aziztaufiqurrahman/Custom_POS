@@ -48,7 +48,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuLabel,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -77,17 +77,19 @@ function BranchPin({ names }: { names: string[] }) {
         {names.length}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="max-h-64 w-52 overflow-auto">
-        <DropdownMenuLabel>
-          {names.length ? `Tersedia di ${names.length} cabang` : "Belum ada cabang"}
-        </DropdownMenuLabel>
+        <DropdownMenuItem
+          disabled
+          className="text-xs font-medium text-muted-foreground opacity-100"
+        >
+          {names.length
+            ? `Tersedia di ${names.length} cabang`
+            : "Belum ada di cabang manapun"}
+        </DropdownMenuItem>
         {names.map((n, i) => (
-          <div
-            key={`${n}-${i}`}
-            className="flex items-center gap-2 px-2 py-1.5 text-sm"
-          >
+          <DropdownMenuItem key={`${n}-${i}`}>
             <MapPin className="size-3.5 shrink-0 text-muted-foreground" />
             <span className="truncate">{n}</span>
-          </div>
+          </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
