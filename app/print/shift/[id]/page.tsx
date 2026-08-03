@@ -103,11 +103,12 @@ export default async function ShiftPrintPage({
       <div className="py-2">
         <Line label="Tunai" value={formatRupiah(b.cash)} />
         <Line label="QRIS" value={formatRupiah(b.qris)} />
-        <Line label="Transfer BNI" value={formatRupiah(b.transferByBank.BNI)} />
-        <Line label="Transfer BCA" value={formatRupiah(b.transferByBank.BCA)} />
-        <Line label="Transfer BSI" value={formatRupiah(b.transferByBank.BSI)} />
+        {Object.entries(b.transferByBank).map(([bank, amt]) => (
+          <Line key={bank} label={`Transfer ${bank}`} value={formatRupiah(amt)} />
+        ))}
         <Line label="GoFood" value={formatRupiah(b.gofood)} />
         <Line label="ShopeeFood" value={formatRupiah(b.shopeefood)} />
+        <Line label="GrabFood" value={formatRupiah(b.grabfood)} />
         <Line
           label={`Total (${b.count} transaksi)`}
           value={formatRupiah(grandTotal(b))}

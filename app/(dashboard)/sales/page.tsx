@@ -14,8 +14,8 @@ export type SaleRow = {
   item_count: number;
   grand_total: number;
   status: "completed" | "void" | "refunded";
-  methods: ("cash" | "qris" | "transfer" | "gofood" | "shopeefood")[];
-  bank: "BNI" | "BCA" | "BSI" | null;
+  methods: ("cash" | "qris" | "transfer" | "gofood" | "shopeefood" | "grabfood")[];
+  bank: string | null;
 };
 
 export type SalesFilters = {
@@ -79,8 +79,8 @@ export default async function SalesPage({
       ? (cashier[0]?.full_name ?? "-")
       : (cashier?.full_name ?? "-");
     const pays = (t.payments ?? []) as {
-      method: "cash" | "qris" | "transfer" | "gofood" | "shopeefood";
-      bank: "BNI" | "BCA" | "BSI" | null;
+      method: "cash" | "qris" | "transfer" | "gofood" | "shopeefood" | "grabfood";
+      bank: string | null;
       amount: number;
     }[];
     const items = (t.transaction_items ?? []) as { count: number }[];

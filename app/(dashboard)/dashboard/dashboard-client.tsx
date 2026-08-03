@@ -58,6 +58,7 @@ const METHOD_META = [
   { key: "transfer", label: "Transfer", color: "#d99a55" },
   { key: "gofood", label: "GoFood", color: "#c0392b" },
   { key: "shopeefood", label: "ShopeeFood", color: "#e67e22" },
+  { key: "grabfood", label: "GrabFood", color: "#16a34a" },
 ] as const;
 const PRIMARY = "#9c6a44";
 

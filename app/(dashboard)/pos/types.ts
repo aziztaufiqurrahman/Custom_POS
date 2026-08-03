@@ -25,8 +25,8 @@ export type CompletedSale = {
   totals: CartTotals;
   shipping: number;
   payment: {
-    method: "cash" | "qris" | "transfer" | "gofood" | "shopeefood";
-    bank: "BNI" | "BCA" | "BSI" | null;
+    method: "cash" | "qris" | "transfer" | "gofood" | "shopeefood" | "grabfood";
+    bank: string | null;
     cashReceived: number | null;
     reference: string;
   };

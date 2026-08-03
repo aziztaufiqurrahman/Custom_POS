@@ -16,8 +16,8 @@ export type SaleDetailItem = {
   line_total: number;
 };
 export type SaleDetailPayment = {
-  method: "cash" | "qris" | "transfer" | "gofood" | "shopeefood";
-  bank: "BNI" | "BCA" | "BSI" | null;
+  method: "cash" | "qris" | "transfer" | "gofood" | "shopeefood" | "grabfood";
+  bank: string | null;
   amount: number;
   cash_received: number | null;
   change_given: number | null;

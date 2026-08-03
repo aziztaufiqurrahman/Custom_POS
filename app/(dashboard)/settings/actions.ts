@@ -201,6 +201,25 @@ export async function saveBankAccount(raw: unknown): Promise<SettingsResult> {
   return { success: true };
 }
 
+export async function deleteBankAccount(bank: string): Promise<SettingsResult> {
+  if (!(await requireAdminSession())) return { error: "Hanya admin" };
+  const branchId = await activeBranchId();
+  if (!branchId) return { error: "Cabang aktif tidak ditemukan" };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("bank_accounts")
+    .delete()
+    .eq("branch_id", branchId)
+    .eq("bank", bank);
+  if (error) return { error: "Gagal menghapus rekening" };
+
+  await logAudit({ action: "settings.bank_delete", entity: "bank_accounts", metadata: { bank } });
+  revalidatePath("/settings");
+  revalidatePath("/pos");
+  return { success: true };
+}
+
 export async function createCategory(raw: unknown): Promise<SettingsResult> {
   if (!(await requireAdminSession())) return { error: "Hanya admin" };
   const parsed = categorySchema.safeParse(raw);

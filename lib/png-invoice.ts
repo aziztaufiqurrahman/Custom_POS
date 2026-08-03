@@ -416,19 +416,28 @@ export async function downloadShiftInvoicePng(s: ShiftInvoice): Promise<void> {
     heading("Rekonsiliasi Kas (Tunai)");
     row("Uang awal", formatRupiah(s.opening_balance));
     row("Penjualan tunai", formatRupiah(s.cash));
-    if (s.expensesBySource.cash > 0)
-      row("Pengeluaran tunai", `-${formatRupiah(s.expensesBySource.cash)}`);
+    if ((s.expensesBySource.cash ?? 0) > 0)
+      row("Pengeluaran tunai", `-${formatRupiah(s.expensesBySource.cash ?? 0)}`);
     row("Kas seharusnya", formatRupiah(s.expected_cash ?? 0), true);
     row("Hitungan fisik", formatRupiah(s.counted_cash ?? 0));
     row("Selisih", varianceText(s.variance), true);
     y += 6;
 
     heading("Arus Masuk vs Keluar per Kanal");
+    // Bank dinamis: gabungan kode bank dari pemasukan transfer & pengeluaran.
+    const bankKeys = Array.from(
+      new Set([
+        ...Object.keys(s.transferByBank),
+        ...Object.keys(s.expensesBySource).filter((k) => k !== "cash"),
+      ]),
+    ).sort();
     const chan: { label: string; in: number; out: number }[] = [
-      { label: "Tunai", in: s.cash, out: s.expensesBySource.cash },
-      { label: "BNI", in: s.transferByBank.BNI, out: s.expensesBySource.BNI },
-      { label: "BCA", in: s.transferByBank.BCA, out: s.expensesBySource.BCA },
-      { label: "BSI", in: s.transferByBank.BSI, out: s.expensesBySource.BSI },
+      { label: "Tunai", in: s.cash, out: s.expensesBySource.cash ?? 0 },
+      ...bankKeys.map((bk) => ({
+        label: bk,
+        in: s.transferByBank[bk] ?? 0,
+        out: s.expensesBySource[bk] ?? 0,
+      })),
     ];
     font(ctx, 700, 11);
     ctx.fillStyle = COL.muted;
@@ -458,9 +467,12 @@ export async function downloadShiftInvoicePng(s: ShiftInvoice): Promise<void> {
     row("QRIS", formatRupiah(s.qris));
     row("GoFood", formatRupiah(s.gofood));
     row("ShopeeFood", formatRupiah(s.shopeefood));
+    row("GrabFood", formatRupiah(s.grabfood));
     row(
       `Total (${s.count} transaksi)`,
-      formatRupiah(s.cash + s.qris + s.transfer + s.gofood + s.shopeefood),
+      formatRupiah(
+        s.cash + s.qris + s.transfer + s.gofood + s.shopeefood + s.grabfood,
+      ),
       true,
     );
 

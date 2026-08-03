@@ -35,6 +35,7 @@ export const PAYMENT_METHODS = [
   "transfer",
   "gofood",
   "shopeefood",
+  "grabfood",
 ] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
@@ -44,6 +45,7 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   transfer: "Transfer Bank",
   gofood: "GoFood",
   shopeefood: "ShopeeFood",
+  grabfood: "GrabFood",
 };
 
 // ── Multi-cabang (PRD v2 §4) ────────────────────────────────────────────────

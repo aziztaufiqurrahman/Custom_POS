@@ -33,7 +33,13 @@ export const branchPosSchema = z.object({
 export type BranchPosInput = z.infer<typeof branchPosSchema>;
 
 export const bankAccountSchema = z.object({
-  bank: z.enum(["BNI", "BCA", "BSI"]),
+  // Nama/kode bank bebas (mis. BCA, Mandiri, BRI, DANA) — bisa ditambah admin.
+  bank: z
+    .string()
+    .trim()
+    .min(1, "Nama bank wajib diisi")
+    .max(40)
+    .regex(/^[A-Za-z0-9 .\-&]+$/, "Hanya huruf, angka, spasi, . - &"),
   account_number: z.string().max(40),
   account_name: z.string().max(120),
   is_active: z.boolean(),

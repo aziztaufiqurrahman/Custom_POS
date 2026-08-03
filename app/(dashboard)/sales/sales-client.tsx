@@ -109,16 +109,24 @@ export function SalesClient({
 
   const summary = useMemo(() => {
     const completed = rows.filter((r) => r.status === "completed");
-    const byMethod = { cash: 0, qris: 0, transfer: 0, gofood: 0, shopeefood: 0 };
-    const byBank = { BNI: 0, BCA: 0, BSI: 0 };
+    const byMethod: Record<string, number> = {
+      cash: 0,
+      qris: 0,
+      transfer: 0,
+      gofood: 0,
+      shopeefood: 0,
+      grabfood: 0,
+    };
+    const byBank: Record<string, number> = {};
     let revenue = 0;
     let items = 0;
     for (const r of completed) {
       revenue += r.grand_total;
       items += r.item_count;
       const m = r.methods[0] ?? "cash";
-      byMethod[m] += r.grand_total;
-      if (m === "transfer" && r.bank) byBank[r.bank] += r.grand_total;
+      byMethod[m] = (byMethod[m] ?? 0) + r.grand_total;
+      if (m === "transfer" && r.bank)
+        byBank[r.bank] = (byBank[r.bank] ?? 0) + r.grand_total;
     }
     return { count: completed.length, revenue, items, byMethod, byBank };
   }, [rows]);
@@ -156,20 +164,25 @@ export function SalesClient({
       </div>
 
       {/* Rincian per metode pembayaran */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         <Stat label="Tunai" value={formatRupiah(summary.byMethod.cash)} />
         <Stat label="QRIS" value={formatRupiah(summary.byMethod.qris)} />
         <Stat label="Transfer" value={formatRupiah(summary.byMethod.transfer)} />
         <Stat label="GoFood" value={formatRupiah(summary.byMethod.gofood)} />
         <Stat label="ShopeeFood" value={formatRupiah(summary.byMethod.shopeefood)} />
+        <Stat label="GrabFood" value={formatRupiah(summary.byMethod.grabfood)} />
       </div>
 
-      {/* Transfer per bank — kolom masing-masing bank */}
-      <div className="grid grid-cols-3 gap-2">
-        <Stat label="Transfer BNI" value={formatRupiah(summary.byBank.BNI)} />
-        <Stat label="Transfer BCA" value={formatRupiah(summary.byBank.BCA)} />
-        <Stat label="Transfer BSI" value={formatRupiah(summary.byBank.BSI)} />
-      </div>
+      {/* Transfer per bank — kolom masing-masing bank (dinamis) */}
+      {Object.keys(summary.byBank).length > 0 && (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          {Object.entries(summary.byBank)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([bank, amt]) => (
+              <Stat key={bank} label={`Transfer ${bank}`} value={formatRupiah(amt)} />
+            ))}
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -209,7 +222,9 @@ export function SalesClient({
                               ? "GoFood"
                               : val === "shopeefood"
                                 ? "ShopeeFood"
-                                : "Semua metode"
+                                : val === "grabfood"
+                                  ? "GrabFood"
+                                  : "Semua metode"
                     }
                   </SelectValue>
                 </SelectTrigger>
@@ -220,6 +235,7 @@ export function SalesClient({
                   <SelectItem value="transfer">Transfer</SelectItem>
                   <SelectItem value="gofood">GoFood</SelectItem>
                   <SelectItem value="shopeefood">ShopeeFood</SelectItem>
+                  <SelectItem value="grabfood">GrabFood</SelectItem>
                 </SelectContent>
               </Select>
             </div>

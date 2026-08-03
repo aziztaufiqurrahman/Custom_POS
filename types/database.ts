@@ -139,7 +139,7 @@ export type Database = {
         Row: {
           account_name: string
           account_number: string
-          bank: Database["public"]["Enums"]["bank_code"]
+          bank: string
           branch_id: string
           created_at: string
           id: string
@@ -149,7 +149,7 @@ export type Database = {
         Insert: {
           account_name?: string
           account_number?: string
-          bank: Database["public"]["Enums"]["bank_code"]
+          bank: string
           branch_id?: string
           created_at?: string
           id?: string
@@ -159,7 +159,7 @@ export type Database = {
         Update: {
           account_name?: string
           account_number?: string
-          bank?: Database["public"]["Enums"]["bank_code"]
+          bank?: string
           branch_id?: string
           created_at?: string
           id?: string
@@ -519,6 +519,7 @@ export type Database = {
           total_cash: number
           total_expenses: number
           total_gofood: number
+          total_grabfood: number
           total_qris: number
           total_shopeefood: number
           total_transfer: number
@@ -540,6 +541,7 @@ export type Database = {
           total_cash?: number
           total_expenses?: number
           total_gofood?: number
+          total_grabfood?: number
           total_qris?: number
           total_shopeefood?: number
           total_transfer?: number
@@ -561,6 +563,7 @@ export type Database = {
           total_cash?: number
           total_expenses?: number
           total_gofood?: number
+          total_grabfood?: number
           total_qris?: number
           total_shopeefood?: number
           total_transfer?: number
@@ -842,7 +845,7 @@ export type Database = {
       payments: {
         Row: {
           amount: number
-          bank: Database["public"]["Enums"]["bank_code"] | null
+          bank: string | null
           branch_id: string
           cash_received: number | null
           change_given: number | null
@@ -1960,7 +1963,7 @@ export type Database = {
         | "transfer_in"
         | "wastage"
       opname_status: "draft" | "completed"
-      payment_method: "cash" | "qris" | "transfer" | "gofood" | "shopeefood"
+      payment_method: "cash" | "qris" | "transfer" | "gofood" | "shopeefood" | "grabfood"
       session_status: "open" | "closed"
       transaction_status: "completed" | "void" | "refunded"
       transfer_status: "draft" | "dispatched" | "received" | "cancelled"
@@ -2121,7 +2124,7 @@ export const Constants = {
         "wastage",
       ],
       opname_status: ["draft", "completed"],
-      payment_method: ["cash", "qris", "transfer", "gofood", "shopeefood"],
+      payment_method: ["cash", "qris", "transfer", "gofood", "shopeefood", "grabfood"],
       session_status: ["open", "closed"],
       transaction_status: ["completed", "void", "refunded"],
       transfer_status: ["draft", "dispatched", "received", "cancelled"],

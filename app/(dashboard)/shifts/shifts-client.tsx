@@ -20,7 +20,7 @@ import {
   grandTotal,
   type PaymentBreakdown,
 } from "@/lib/shift";
-import { EXPENSE_CATEGORIES, EXPENSE_SOURCES } from "@/lib/validations/shift";
+import { EXPENSE_CATEGORIES } from "@/lib/validations/shift";
 import { DownloadInvoiceButton } from "@/components/domain/download-invoice-button";
 import { formatRupiah } from "@/lib/format";
 import { formatTanggalWaktu } from "@/lib/date";
@@ -92,13 +92,21 @@ const SOURCE_LABELS: Record<string, string> = {
   BSI: "BSI",
 };
 
-function ExpenseDialog({ onDone }: { onDone: () => void }) {
+function ExpenseDialog({
+  banks,
+  onDone,
+}: {
+  banks: string[];
+  onDone: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState(0);
   const [category, setCategory] = useState<string>("ongkir");
   const [source, setSource] = useState<string>("cash");
   const [note, setNote] = useState("");
   const [pending, start] = useTransition();
+  // Sumber uang keluar: tunai + bank aktif cabang.
+  const sources = ["cash", ...banks];
 
   function submit() {
     start(async () => {
@@ -168,9 +176,9 @@ function ExpenseDialog({ onDone }: { onDone: () => void }) {
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {EXPENSE_SOURCES.map((s) => (
+                {sources.map((s) => (
                   <SelectItem key={s} value={s}>
-                    {SOURCE_LABELS[s]}
+                    {SOURCE_LABELS[s] ?? s}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -204,9 +212,11 @@ function ExpenseDialog({ onDone }: { onDone: () => void }) {
 
 function ExpensesCard({
   expenses,
+  banks,
   onChanged,
 }: {
   expenses: SessionExpenses;
+  banks: string[];
   onChanged: () => void;
 }) {
   const [pending, start] = useTransition();
@@ -227,7 +237,7 @@ function ExpensesCard({
     <div className="rounded-md border p-3">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-sm font-medium">Pengeluaran (kas keluar)</span>
-        <ExpenseDialog onDone={onChanged} />
+        <ExpenseDialog banks={banks} onDone={onChanged} />
       </div>
       {expenses.items.length === 0 ? (
         <p className="py-2 text-center text-xs text-muted-foreground">
@@ -402,6 +412,7 @@ function CloseShiftDialog({
             <Row label="Transfer" value={formatRupiah(breakdown.transfer)} />
             <Row label="GoFood" value={formatRupiah(breakdown.gofood)} />
             <Row label="ShopeeFood" value={formatRupiah(breakdown.shopeefood)} />
+            <Row label="GrabFood" value={formatRupiah(breakdown.grabfood)} />
             <Row
               label="Total transaksi"
               value={formatRupiah(grandTotal(breakdown))}
@@ -434,11 +445,13 @@ function ActiveShiftCard({
   active,
   breakdown,
   expenses,
+  banks,
   onClosed,
 }: {
   active: ActiveShift;
   breakdown: PaymentBreakdown;
   expenses: SessionExpenses;
+  banks: string[];
   onClosed: () => void;
 }) {
   const expectedCash = active.opening_balance + breakdown.cash - expenses.cash;
@@ -481,6 +494,7 @@ function ActiveShiftCard({
             <Row label="Transfer" value={formatRupiah(breakdown.transfer)} />
             <Row label="GoFood" value={formatRupiah(breakdown.gofood)} />
             <Row label="ShopeeFood" value={formatRupiah(breakdown.shopeefood)} />
+            <Row label="GrabFood" value={formatRupiah(breakdown.grabfood)} />
             <Row
               label={`Total (${breakdown.count} transaksi)`}
               value={formatRupiah(grandTotal(breakdown))}
@@ -489,7 +503,7 @@ function ActiveShiftCard({
           </div>
         </div>
         <ChannelSummary breakdown={breakdown} expenses={expenses} />
-        <ExpensesCard expenses={expenses} onChanged={onClosed} />
+        <ExpensesCard expenses={expenses} banks={banks} onChanged={onClosed} />
       </CardContent>
     </Card>
   );
@@ -503,11 +517,20 @@ function ChannelSummary({
   breakdown: PaymentBreakdown;
   expenses: SessionExpenses;
 }) {
+  // Bank dinamis: gabungan kode bank dari pemasukan transfer & pengeluaran.
+  const bankKeys = Array.from(
+    new Set([
+      ...Object.keys(breakdown.transferByBank),
+      ...Object.keys(expenses.bySource).filter((k) => k !== "cash"),
+    ]),
+  ).sort();
   const rows: { label: string; masuk: number; keluar: number }[] = [
-    { label: "Tunai", masuk: breakdown.cash, keluar: expenses.bySource.cash },
-    { label: "BNI", masuk: breakdown.transferByBank.BNI, keluar: expenses.bySource.BNI },
-    { label: "BCA", masuk: breakdown.transferByBank.BCA, keluar: expenses.bySource.BCA },
-    { label: "BSI", masuk: breakdown.transferByBank.BSI, keluar: expenses.bySource.BSI },
+    { label: "Tunai", masuk: breakdown.cash, keluar: expenses.bySource.cash ?? 0 },
+    ...bankKeys.map((bk) => ({
+      label: bk,
+      masuk: breakdown.transferByBank[bk] ?? 0,
+      keluar: expenses.bySource[bk] ?? 0,
+    })),
   ];
   return (
     <div className="rounded-md border p-3">
@@ -609,13 +632,18 @@ function DetailDialog({
               <p className="py-1 text-xs text-muted-foreground">Memuat rincian bank…</p>
             ) : breakdown ? (
               <div className="mt-1 border-t pt-1">
-                <Row label="— Transfer BNI" value={formatRupiah(breakdown.transferByBank.BNI)} />
-                <Row label="— Transfer BCA" value={formatRupiah(breakdown.transferByBank.BCA)} />
-                <Row label="— Transfer BSI" value={formatRupiah(breakdown.transferByBank.BSI)} />
+                {Object.entries(breakdown.transferByBank).map(([bank, amt]) => (
+                  <Row
+                    key={bank}
+                    label={`— Transfer ${bank}`}
+                    value={formatRupiah(amt)}
+                  />
+                ))}
               </div>
             ) : null}
             <Row label="GoFood" value={formatRupiah(item.total_gofood)} />
             <Row label="ShopeeFood" value={formatRupiah(item.total_shopeefood)} />
+            <Row label="GrabFood" value={formatRupiah(item.total_grabfood)} />
             <Row
               label="Total transaksi"
               value={formatRupiah(
@@ -623,7 +651,8 @@ function DetailDialog({
                   item.total_qris +
                   item.total_transfer +
                   item.total_gofood +
-                  item.total_shopeefood,
+                  item.total_shopeefood +
+                  item.total_grabfood,
               )}
               strong
             />
@@ -660,6 +689,7 @@ function exportCsv(history: ShiftHistoryItem[]) {
     "Transfer",
     "GoFood",
     "ShopeeFood",
+    "GrabFood",
     "Pengeluaran",
     "Total Transaksi",
   ];
@@ -676,12 +706,14 @@ function exportCsv(history: ShiftHistoryItem[]) {
     h.total_transfer,
     h.total_gofood,
     h.total_shopeefood,
+    h.total_grabfood,
     h.total_expenses,
     h.total_cash +
       h.total_qris +
       h.total_transfer +
       h.total_gofood +
-      h.total_shopeefood,
+      h.total_shopeefood +
+      h.total_grabfood,
   ]);
   const csv = [header, ...rows]
     .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
@@ -702,6 +734,7 @@ export function ShiftsClient({
   history,
   isAdmin,
   showBranch = false,
+  banks = [],
 }: {
   active: ActiveShift | null;
   activeBreakdown: PaymentBreakdown | null;
@@ -709,6 +742,7 @@ export function ShiftsClient({
   history: ShiftHistoryItem[];
   isAdmin: boolean;
   showBranch?: boolean;
+  banks?: string[];
 }) {
   const router = useRouter();
   const [detail, setDetail] = useState<ShiftHistoryItem | null>(null);
@@ -727,10 +761,11 @@ export function ShiftsClient({
             activeExpenses ?? {
               total: 0,
               cash: 0,
-              bySource: { cash: 0, BNI: 0, BCA: 0, BSI: 0 },
+              bySource: {},
               items: [],
             }
           }
+          banks={banks}
           onClosed={refresh}
         />
       ) : (
@@ -800,7 +835,8 @@ export function ShiftsClient({
                             h.total_qris +
                             h.total_transfer +
                             h.total_gofood +
-                            h.total_shopeefood,
+                            h.total_shopeefood +
+                            h.total_grabfood,
                         )}
                       </TableCell>
                       <TableCell>

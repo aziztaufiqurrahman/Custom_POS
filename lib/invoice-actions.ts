@@ -24,8 +24,8 @@ export type ReceiptInvoiceItem = {
 };
 
 export type ReceiptInvoicePayment = {
-  method: "cash" | "qris" | "transfer" | "gofood" | "shopeefood";
-  bank: "BNI" | "BCA" | "BSI" | null;
+  method: "cash" | "qris" | "transfer" | "gofood" | "shopeefood" | "grabfood";
+  bank: string | null;
   amount: number;
   cash_received: number | null;
   change_given: number | null;
@@ -145,10 +145,11 @@ export type ShiftInvoice = {
   transfer: number;
   gofood: number;
   shopeefood: number;
-  transferByBank: { BNI: number; BCA: number; BSI: number };
+  grabfood: number;
+  transferByBank: Record<string, number>;
   count: number;
   expenses: ShiftInvoiceExpense[];
-  expensesBySource: { cash: number; BNI: number; BCA: number; BSI: number };
+  expensesBySource: Record<string, number>;
 };
 
 export async function getShiftInvoice(id: string): Promise<ShiftInvoice | null> {
@@ -192,6 +193,7 @@ export async function getShiftInvoice(id: string): Promise<ShiftInvoice | null> 
     transfer: b.transfer,
     gofood: b.gofood,
     shopeefood: b.shopeefood,
+    grabfood: b.grabfood,
     transferByBank: b.transferByBank,
     count: b.count,
     expenses: e.items.map((x) => ({

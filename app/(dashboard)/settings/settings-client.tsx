@@ -7,6 +7,7 @@ import { Check, Palette, Pencil, Plus, Store, Trash2 } from "lucide-react";
 
 import {
   createCategory,
+  deleteBankAccount,
   deleteCategory,
   renameCategory,
   saveBankAccount,
@@ -507,6 +508,10 @@ function BankCard({ banks, branchName }: { banks: BankData[]; branchName: string
   const router = useRouter();
   const [pending, start] = useTransition();
   const [rows, setRows] = useState(banks);
+  // Form tambah bank baru.
+  const [newBank, setNewBank] = useState("");
+  const [newNumber, setNewNumber] = useState("");
+  const [newName, setNewName] = useState("");
 
   function update(i: number, patch: Partial<BankData>) {
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
@@ -514,8 +519,50 @@ function BankCard({ banks, branchName }: { banks: BankData[]; branchName: string
   function save(row: BankData) {
     start(async () => {
       const res = await saveBankAccount(row);
-      if (res.error) { toast.error(res.error); return; }
+      if (res.error) {
+        toast.error(res.error);
+        return;
+      }
       toast.success(`Rekening ${row.bank} disimpan`);
+      router.refresh();
+    });
+  }
+  function remove(bank: string) {
+    start(async () => {
+      const res = await deleteBankAccount(bank);
+      if (res.error) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success(`Rekening ${bank} dihapus`);
+      router.refresh();
+    });
+  }
+  function addBank() {
+    const bank = newBank.trim();
+    if (!bank) {
+      toast.error("Nama bank wajib diisi");
+      return;
+    }
+    if (rows.some((r) => r.bank.toLowerCase() === bank.toLowerCase())) {
+      toast.error("Bank sudah ada");
+      return;
+    }
+    start(async () => {
+      const res = await saveBankAccount({
+        bank,
+        account_number: newNumber.trim(),
+        account_name: newName.trim(),
+        is_active: true,
+      });
+      if (res.error) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success(`Bank ${bank} ditambahkan`);
+      setNewBank("");
+      setNewNumber("");
+      setNewName("");
       router.refresh();
     });
   }
@@ -525,21 +572,38 @@ function BankCard({ banks, branchName }: { banks: BankData[]; branchName: string
       <CardHeader>
         <CardTitle>Rekening Bank</CardTitle>
         <CardDescription>
-          Ditampilkan saat pembayaran Transfer (BNI/BCA/BSI) — cabang {branchName}.
+          Ditampilkan saat pembayaran Transfer — cabang {branchName}. Tambah bank
+          apa pun (mis. Mandiri, BRI, DANA) sesuai kebutuhan.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {rows.length === 0 && (
+          <p className="rounded-md border border-dashed p-3 text-center text-sm text-muted-foreground">
+            Belum ada rekening bank. Tambahkan di bawah.
+          </p>
+        )}
         {rows.map((row, i) => (
           <div key={row.bank} className="rounded-md border p-3">
             <div className="mb-2 flex items-center justify-between">
               <Badge>{row.bank}</Badge>
-              <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                Aktif
-                <Switch
-                  checked={row.is_active}
-                  onCheckedChange={(v) => update(i, { is_active: v })}
-                />
-              </label>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  Aktif
+                  <Switch
+                    checked={row.is_active}
+                    onCheckedChange={(v) => update(i, { is_active: v })}
+                  />
+                </label>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled={pending}
+                  onClick={() => remove(row.bank)}
+                  aria-label={`Hapus ${row.bank}`}
+                >
+                  <Trash2 className="size-4 text-destructive" />
+                </Button>
+              </div>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
               <div className="grid gap-1.5">
@@ -568,6 +632,41 @@ function BankCard({ banks, branchName }: { banks: BankData[]; branchName: string
             </Button>
           </div>
         ))}
+
+        {/* Tambah bank baru */}
+        <div className="rounded-md border border-dashed p-3">
+          <p className="mb-2 text-sm font-medium">Tambah Bank</p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="grid gap-1.5">
+              <Label className="text-xs">Nama/Kode Bank</Label>
+              <Input
+                value={newBank}
+                onChange={(e) => setNewBank(e.target.value)}
+                placeholder="mis. Mandiri"
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label className="text-xs">No. Rekening</Label>
+              <Input
+                value={newNumber}
+                onChange={(e) => setNewNumber(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label className="text-xs">Nama Pemilik</Label>
+              <Input value={newName} onChange={(e) => setNewName(e.target.value)} />
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            disabled={pending}
+            onClick={addBank}
+          >
+            <Plus className="size-4" /> Tambah Bank
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

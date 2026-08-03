@@ -7,8 +7,16 @@ export const saleItemSchema = z.object({
 });
 
 export const salePaymentSchema = z.object({
-  method: z.enum(["cash", "qris", "transfer", "gofood", "shopeefood"]),
-  bank: z.enum(["BNI", "BCA", "BSI"]).nullable(),
+  method: z.enum([
+    "cash",
+    "qris",
+    "transfer",
+    "gofood",
+    "shopeefood",
+    "grabfood",
+  ]),
+  // Bank dinamis: kode bebas (mis. "BNI", "Mandiri"), maks 40 char.
+  bank: z.string().trim().max(40).nullable(),
   cash_received: z.number().min(0).nullable(),
   reference: z.string().max(120),
 });

@@ -1,7 +1,6 @@
 import { requireAdmin } from "@/lib/auth";
 import { getBranchContext } from "@/lib/branch";
 import { createClient } from "@/lib/supabase/server";
-import { BANKS } from "@/lib/constants";
 
 import { SettingsClient } from "./settings-client";
 
@@ -30,7 +29,7 @@ export type BranchPosData = {
 };
 
 export type BankData = {
-  bank: "BNI" | "BCA" | "BSI";
+  bank: string;
   account_number: string;
   account_name: string;
   is_active: boolean;
@@ -86,19 +85,16 @@ export default async function SettingsPage() {
     qris_image_url: bs?.qris_image_url ?? null,
   };
 
-  // Normalkan ke tiga bank (BNI/BCA/BSI) agar UI selalu lengkap untuk cabang.
-  const bankMap = new Map(
-    (banksRaw ?? []).map((b) => [b.bank, b as BankData]),
-  );
-  const banks: BankData[] = BANKS.map(
-    (bank) =>
-      bankMap.get(bank) ?? {
-        bank,
-        account_number: "",
-        account_name: "",
-        is_active: true,
-      },
-  );
+  // Bank dinamis: tampilkan rekening yang sudah ditambahkan admin untuk cabang
+  // ini (bisa ditambah/dihapus). Tidak lagi dipatok ke 3 bank tetap.
+  const banks: BankData[] = (banksRaw ?? [])
+    .map((b) => ({
+      bank: b.bank,
+      account_number: b.account_number ?? "",
+      account_name: b.account_name ?? "",
+      is_active: b.is_active ?? true,
+    }))
+    .sort((a, b) => a.bank.localeCompare(b.bank));
 
   return (
     <SettingsClient

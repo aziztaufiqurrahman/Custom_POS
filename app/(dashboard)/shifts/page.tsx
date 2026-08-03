@@ -27,6 +27,7 @@ export type ShiftHistoryItem = {
   total_transfer: number;
   total_gofood: number;
   total_shopeefood: number;
+  total_grabfood: number;
   total_expenses: number;
 };
 
@@ -97,9 +98,21 @@ export default async function ShiftsPage() {
       total_transfer: h.total_transfer,
       total_gofood: h.total_gofood,
       total_shopeefood: h.total_shopeefood,
+      total_grabfood: h.total_grabfood ?? 0,
       total_expenses: h.total_expenses ?? 0,
     };
   });
+
+  // Daftar bank aktif cabang (untuk pilihan sumber pengeluaran kas).
+  const { data: bankRows } = ctx.activeBranchId
+    ? await supabase
+        .from("bank_accounts")
+        .select("bank")
+        .eq("branch_id", ctx.activeBranchId)
+        .eq("is_active", true)
+        .order("bank")
+    : { data: [] as { bank: string }[] };
+  const branchBanks = (bankRows ?? []).map((b) => b.bank as string);
 
   return (
     <ShiftsClient
@@ -109,6 +122,7 @@ export default async function ShiftsPage() {
       history={historyItems}
       isAdmin={canSeeBranch}
       showBranch={isMaster}
+      banks={branchBanks}
     />
   );
 }

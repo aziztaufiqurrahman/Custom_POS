@@ -102,6 +102,7 @@ export async function closeShift(raw: unknown): Promise<ShiftActionResult> {
       total_transfer: b.transfer,
       total_gofood: b.gofood,
       total_shopeefood: b.shopeefood,
+      total_grabfood: b.grabfood,
       total_expenses: expenses.total,
       note: parsed.data.note || null,
     })

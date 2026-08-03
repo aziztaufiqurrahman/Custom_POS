@@ -37,15 +37,20 @@ export async function getSessionBreakdown(
     else if (p.method === "qris") result.qris += p.amount;
     else if (p.method === "gofood") result.gofood += p.amount;
     else if (p.method === "shopeefood") result.shopeefood += p.amount;
+    else if (p.method === "grabfood") result.grabfood += p.amount;
     else if (p.method === "transfer") {
       result.transfer += p.amount;
-      if (p.bank) result.transferByBank[p.bank as Bank] += p.amount;
+      if (p.bank) {
+        const bank = p.bank as Bank;
+        result.transferByBank[bank] = (result.transferByBank[bank] ?? 0) + p.amount;
+      }
     }
   }
   return result;
 }
 
-export type ExpenseSource = "cash" | "BNI" | "BCA" | "BSI";
+// Sumber uang keluar: "cash" atau kode bank dinamis.
+export type ExpenseSource = string;
 
 export type ExpenseItem = {
   id: string;
@@ -59,7 +64,7 @@ export type ExpenseItem = {
 export type SessionExpenses = {
   total: number; // seluruh pengeluaran (semua kanal)
   cash: number; // pengeluaran dari kas laci (mengurangi kas seharusnya)
-  bySource: Record<ExpenseSource, number>;
+  bySource: Record<string, number>;
   items: ExpenseItem[];
 };
 
@@ -75,12 +80,12 @@ export async function getSessionExpenses(
     .order("created_at", { ascending: false });
 
   const items = (data ?? []) as ExpenseItem[];
-  const bySource: Record<ExpenseSource, number> = { cash: 0, BNI: 0, BCA: 0, BSI: 0 };
+  const bySource: Record<string, number> = {};
   let total = 0;
   for (const e of items) {
     total += e.amount;
-    const src = (["cash", "BNI", "BCA", "BSI"].includes(e.source) ? e.source : "cash") as ExpenseSource;
-    bySource[src] += e.amount;
+    const src = e.source || "cash";
+    bySource[src] = (bySource[src] ?? 0) + e.amount;
   }
-  return { total, cash: bySource.cash, bySource, items };
+  return { total, cash: bySource.cash ?? 0, bySource, items };
 }

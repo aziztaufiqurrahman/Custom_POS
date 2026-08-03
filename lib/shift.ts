@@ -1,6 +1,7 @@
 /** Logika rekonsiliasi kas shift (murni, dapat diuji). */
 
-export type Bank = "BNI" | "BCA" | "BSI";
+// Bank kini dinamis (bisa ditambah admin di Pengaturan) — kode bank bebas.
+export type Bank = string;
 
 export type PaymentBreakdown = {
   cash: number;
@@ -8,7 +9,9 @@ export type PaymentBreakdown = {
   transfer: number;
   gofood: number;
   shopeefood: number;
-  transferByBank: Record<Bank, number>;
+  grabfood: number;
+  // Bank dinamis: kunci = kode bank (mis. "BNI", "Mandiri"), nilai = total.
+  transferByBank: Record<string, number>;
   count: number; // jumlah transaksi selesai
 };
 
@@ -19,7 +22,8 @@ export function emptyBreakdown(): PaymentBreakdown {
     transfer: 0,
     gofood: 0,
     shopeefood: 0,
-    transferByBank: { BNI: 0, BCA: 0, BSI: 0 },
+    grabfood: 0,
+    transferByBank: {},
     count: 0,
   };
 }
@@ -28,16 +32,22 @@ function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
-/** Total seluruh transaksi = cash + qris + transfer + gofood + shopeefood. */
+/** Total seluruh transaksi = cash + qris + transfer + gofood + shopeefood + grabfood. */
 export function grandTotal(b: {
   cash: number;
   qris: number;
   transfer: number;
   gofood?: number;
   shopeefood?: number;
+  grabfood?: number;
 }): number {
   return round2(
-    b.cash + b.qris + b.transfer + (b.gofood ?? 0) + (b.shopeefood ?? 0),
+    b.cash +
+      b.qris +
+      b.transfer +
+      (b.gofood ?? 0) +
+      (b.shopeefood ?? 0) +
+      (b.grabfood ?? 0),
   );
 }
 

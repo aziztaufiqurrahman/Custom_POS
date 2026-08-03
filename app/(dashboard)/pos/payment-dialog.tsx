@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
-import { Banknote, Bike, QrCode, Landmark, Maximize2, ShoppingBag, X } from "lucide-react";
+import { Banknote, Bike, QrCode, Landmark, Maximize2, ShoppingBag, Utensils, X } from "lucide-react";
 
 import { createSale } from "./actions";
 import type { PosBank, PosSettings } from "./page";
@@ -25,7 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-type Method = "cash" | "qris" | "transfer" | "gofood" | "shopeefood";
+type Method = "cash" | "qris" | "transfer" | "gofood" | "shopeefood" | "grabfood";
 const QUICK = [50000, 100000, 150000, 200000];
 
 export function PaymentDialog({
@@ -195,6 +195,12 @@ export function PaymentDialog({
             icon={<ShoppingBag className="size-4" />}
             label="ShopeeFood"
           />
+          <MethodButton
+            active={method === "grabfood"}
+            onClick={() => setMethod("grabfood")}
+            icon={<Utensils className="size-4" />}
+            label="GrabFood"
+          />
         </div>
 
         {/* Tunai */}
@@ -279,19 +285,25 @@ export function PaymentDialog({
         {/* Transfer */}
         {method === "transfer" && (
           <div className="space-y-3">
-            <div className="flex gap-2">
-              {(["BNI", "BCA", "BSI"] as const).map((b) => (
-                <Button
-                  key={b}
-                  variant={bank === b ? "default" : "outline"}
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => setBank(b)}
-                >
-                  {b}
-                </Button>
-              ))}
-            </div>
+            {banks.length === 0 ? (
+              <p className="rounded-md border border-dashed p-3 text-center text-sm text-muted-foreground">
+                Belum ada rekening bank untuk cabang ini. Tambah di Pengaturan.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {banks.map((acc) => (
+                  <Button
+                    key={acc.bank}
+                    variant={bank === acc.bank ? "default" : "outline"}
+                    size="sm"
+                    className="min-w-16 flex-1"
+                    onClick={() => setBank(acc.bank)}
+                  >
+                    {acc.bank}
+                  </Button>
+                ))}
+              </div>
+            )}
             <div className="rounded-md border p-3 text-sm">
               {selectedBank && selectedBank.account_number ? (
                 <>
@@ -320,17 +332,26 @@ export function PaymentDialog({
           </div>
         )}
 
-        {/* GoFood / ShopeeFood — konfirmasi seperti QRIS (masuk penjualan & struk) */}
-        {(method === "gofood" || method === "shopeefood") && (
+        {/* GoFood / ShopeeFood / GrabFood — konfirmasi seperti QRIS (masuk penjualan & struk) */}
+        {(method === "gofood" || method === "shopeefood" || method === "grabfood") && (
           <div className="space-y-3">
             <div className="flex items-center gap-3 rounded-md border p-3 text-sm">
               {method === "gofood" ? (
                 <Bike className="size-5 text-primary" />
-              ) : (
+              ) : method === "shopeefood" ? (
                 <ShoppingBag className="size-5 text-primary" />
+              ) : (
+                <Utensils className="size-5 text-primary" />
               )}
               <span>
-                Pesanan <b>{method === "gofood" ? "GoFood" : "ShopeeFood"}</b>{" "}
+                Pesanan{" "}
+                <b>
+                  {method === "gofood"
+                    ? "GoFood"
+                    : method === "shopeefood"
+                      ? "ShopeeFood"
+                      : "GrabFood"}
+                </b>{" "}
                 senilai {formatRupiah(total)}. Konfirmasi bila pembayaran dari
                 aplikasi sudah diterima.
               </span>
@@ -341,7 +362,7 @@ export function PaymentDialog({
                 id="ref-online"
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
-                placeholder="mis. no. pesanan GoFood/ShopeeFood"
+                placeholder="mis. no. pesanan GoFood/ShopeeFood/GrabFood"
               />
             </div>
           </div>
