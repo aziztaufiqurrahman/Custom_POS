@@ -28,11 +28,19 @@ import type {
   WhProduct,
 } from "./page";
 import { formatTanggalWaktu } from "@/lib/date";
+import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -60,18 +68,34 @@ function ProductSelect({
   onChange: (v: string) => void;
 }) {
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="h-9 w-full rounded-md border bg-transparent px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    <Select
+      value={value || null}
+      onValueChange={(v) => onChange(v ?? "")}
     >
-      <option value="">Pilih produk…</option>
-      {products.map((p) => (
-        <option key={p.id} value={p.id}>
-          {p.name} (stok {p.stock} {p.unit})
-        </option>
-      ))}
-    </select>
+      <SelectTrigger className="h-9 w-full">
+        <SelectValue>
+          {(val: string | null) =>
+            products.find((p) => p.id === val)?.name ?? "Pilih produk…"
+          }
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {products.length === 0 ? (
+          <div className="px-2 py-2 text-sm text-muted-foreground">
+            Tidak ada produk.
+          </div>
+        ) : (
+          products.map((p) => (
+            <SelectItem key={p.id} value={p.id}>
+              <span className="flex-1 truncate font-medium">{p.name}</span>
+              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
+                {formatNumber(p.stock)} {p.unit}
+              </span>
+            </SelectItem>
+          ))
+        )}
+      </SelectContent>
+    </Select>
   );
 }
 
