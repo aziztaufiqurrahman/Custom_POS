@@ -46,6 +46,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Table,
   TableBody,
   TableCell,
@@ -54,19 +60,37 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-/** Ikon lokasi + tooltip (hover) berisi daftar cabang tempat produk tersedia. */
+/** Ikon lokasi; DIKLIK menampilkan daftar cabang tempat produk tersedia. */
 function BranchPin({ names }: { names: string[] }) {
-  const title = names.length
-    ? `Tersedia di: ${names.join(", ")}`
-    : "Belum tersedia di cabang manapun";
   return (
-    <span
-      title={title}
-      className="inline-flex cursor-default items-center gap-0.5 text-xs text-muted-foreground"
-    >
-      <MapPin className="size-3.5" />
-      {names.length}
-    </span>
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <button
+            type="button"
+            aria-label="Lihat cabang"
+            className="inline-flex cursor-pointer items-center gap-0.5 rounded px-1 py-0.5 text-xs text-muted-foreground outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        }
+      >
+        <MapPin className="size-3.5" />
+        {names.length}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="max-h-64 w-52 overflow-auto">
+        <DropdownMenuLabel>
+          {names.length ? `Tersedia di ${names.length} cabang` : "Belum ada cabang"}
+        </DropdownMenuLabel>
+        {names.map((n, i) => (
+          <div
+            key={`${n}-${i}`}
+            className="flex items-center gap-2 px-2 py-1.5 text-sm"
+          >
+            <MapPin className="size-3.5 shrink-0 text-muted-foreground" />
+            <span className="truncate">{n}</span>
+          </div>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
