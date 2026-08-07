@@ -2,6 +2,7 @@ import {
   BadgeCheck,
   Boxes,
   Clock,
+  CreditCard,
   FileBarChart,
   LayoutDashboard,
   Package,
@@ -42,7 +43,17 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/branches", label: "Cabang", icon: Store, adminOnly: true, masterAdminOnly: true },
   { href: "/employees", label: "Karyawan", icon: Users, adminOnly: true, masterAdminOnly: true },
   { href: "/audit-logs", label: "Audit Log", icon: ScrollText, adminOnly: true },
+  { href: "/langganan", label: "Langganan", icon: CreditCard, adminOnly: true, masterAdminOnly: true },
   { href: "/settings", label: "Pengaturan", icon: Settings, adminOnly: true },
+];
+
+/**
+ * Menu operator platform (pemilik SaaS), BUKAN tenant. Dipisah dari NAV_ITEMS
+ * karena penentunya `profiles.is_staff` — sebuah peran lintas-workspace yang
+ * tidak ada hubungannya dengan peran di dalam satu usaha.
+ */
+export const STAFF_NAV_ITEMS: NavItem[] = [
+  { href: "/platform/pesanan", label: "Pesanan Masuk", icon: Receipt, adminOnly: false },
 ];
 
 /** Saring item nav sesuai peran. */

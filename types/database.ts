@@ -47,6 +47,36 @@ export type Database = {
         }
         Relationships: []
       }
+      billing_settings: {
+        Row: {
+          account_holder: string
+          account_number: string
+          bank_name: string
+          id: boolean
+          instructions: string
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          account_holder?: string
+          account_number?: string
+          bank_name?: string
+          id?: boolean
+          instructions?: string
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          account_holder?: string
+          account_number?: string
+          bank_name?: string
+          id?: boolean
+          instructions?: string
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
       bundle_items: {
         Row: {
           bundle_id: string
@@ -912,6 +942,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      confirm_order_payment: {
+        Args: {
+          p_gateway?: string
+          p_gateway_ref?: string
+          p_method?: string
+          p_order_id: string
+        }
+        Returns: string
+      }
+      create_plan_order: {
+        Args: { p_plan_id: string; p_workspace_id: string }
+        Returns: {
+          billing_period: string
+          code: string
+          order_id: string
+          tier: string
+          total: number
+        }[]
+      }
       current_workspace_id: { Args: never; Returns: string }
       expire_overdue_subscriptions: { Args: never; Returns: number }
       has_active_entitlement: {
@@ -925,6 +974,8 @@ export type Database = {
         Args: { key: string; product_slug: string; ws: string }
         Returns: number
       }
+      mark_due_subscriptions: { Args: never; Returns: number }
+      next_order_code: { Args: never; Returns: string }
       provision_workspace: {
         Args: {
           p_billing_period?: string
@@ -941,6 +992,7 @@ export type Database = {
         Args: { prod: string; ws: string }
         Returns: undefined
       }
+      run_billing_maintenance: { Args: never; Returns: Json }
       user_workspace_ids: { Args: never; Returns: string[] }
       workspace_role: {
         Args: { ws: string }
@@ -953,7 +1005,7 @@ export type Database = {
       billing_period: "monthly" | "annual"
       coupon_type: "percent" | "amount"
       entitlement_status: "active" | "inactive" | "suspended"
-      gateway: "midtrans" | "xendit"
+      gateway: "midtrans" | "xendit" | "manual"
       member_role: "owner" | "admin" | "member"
       order_item_type: "plan" | "bundle" | "addon"
       order_status:
@@ -2828,8 +2880,29 @@ export type Database = {
         }
         Returns: Json
       }
+      am_i_staff: { Args: never; Returns: boolean }
       apply_price_override: { Args: { p_approval_id: string }; Returns: Json }
       approve_wastage: { Args: { p_wastage_id: string }; Returns: Json }
+      available_plans: {
+        Args: never
+        Returns: {
+          billing_period: string
+          limits: Json
+          plan_id: string
+          price: number
+          tier: string
+        }[]
+      }
+      billing_info: {
+        Args: never
+        Returns: {
+          account_holder: string
+          account_number: string
+          bank_name: string
+          instructions: string
+          whatsapp: string
+        }[]
+      }
       branch_seq_gaps: {
         Args: never
         Returns: {
@@ -2898,7 +2971,38 @@ export type Database = {
       is_main_branch: { Args: { b: string }; Returns: boolean }
       is_master_admin: { Args: never; Returns: boolean }
       main_branch_of: { Args: { b: string }; Returns: string }
+      my_pending_order: {
+        Args: never
+        Returns: {
+          code: string
+          created_at: string
+          order_id: string
+          tier: string
+          total: number
+        }[]
+      }
+      my_subscription: {
+        Args: never
+        Returns: {
+          billing_period: string
+          current_period_end: string
+          limits: Json
+          price: number
+          status: string
+          tier: string
+        }[]
+      }
       my_workspace_id: { Args: never; Returns: string }
+      order_plan: {
+        Args: { p_plan_id: string }
+        Returns: {
+          billing_period: string
+          code: string
+          order_id: string
+          tier: string
+          total: number
+        }[]
+      }
       provision_my_workspace: {
         Args: {
           p_branch_code?: string
@@ -2945,6 +3049,7 @@ export type Database = {
         }
         Returns: Json
       }
+      run_billing_maintenance: { Args: never; Returns: Json }
       set_branch_price_stock: {
         Args: {
           p_branch_id: string
@@ -2958,6 +3063,35 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      staff_confirm_payment: {
+        Args: { p_gateway_ref?: string; p_order_id: string }
+        Returns: string
+      }
+      staff_pending_orders: {
+        Args: never
+        Returns: {
+          billing_period: string
+          code: string
+          created_at: string
+          order_id: string
+          pemesan: string
+          tier: string
+          total: number
+          workspace: string
+        }[]
+      }
+      staff_recent_payments: {
+        Args: never
+        Returns: {
+          amount: number
+          code: string
+          gateway: string
+          method: string
+          paid_at: string
+          tier: string
+          workspace: string
+        }[]
+      }
       storage_workspace_of: { Args: { object_name: string }; Returns: string }
       user_branch_ids: { Args: never; Returns: string[] }
       void_sale: {
@@ -3136,7 +3270,7 @@ export const Constants = {
       billing_period: ["monthly", "annual"],
       coupon_type: ["percent", "amount"],
       entitlement_status: ["active", "inactive", "suspended"],
-      gateway: ["midtrans", "xendit"],
+      gateway: ["midtrans", "xendit", "manual"],
       member_role: ["owner", "admin", "member"],
       order_item_type: ["plan", "bundle", "addon"],
       order_status: [

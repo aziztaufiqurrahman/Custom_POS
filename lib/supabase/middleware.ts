@@ -30,6 +30,10 @@ export async function updateSession(request: NextRequest) {
     "/reset-password",
     "/auth",
     "/struk",
+    // Dipanggil penjadwal, bukan browser — tidak punya sesi. Otentikasinya
+    // memakai bearer CRON_SECRET di dalam route itu sendiri, jadi middleware
+    // tidak boleh mengalihkannya ke /login.
+    "/api/cron",
   ];
   const isPublic =
     publicPrefixes.some((p) => pathname === p || pathname.startsWith(p + "/")) ||
