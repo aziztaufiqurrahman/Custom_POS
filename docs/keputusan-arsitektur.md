@@ -25,7 +25,10 @@ konfirmasi ke pemilik lebih dulu.
 | B5 | UUID cabang pusat hardcoded di 3 lapisan (ditemukan dari dump) | ✅ **Diputuskan** |
 | R1 | Rekonsiliasi PRD v2 ↔ sistem aktual (37 perbedaan) | ✅ **Selesai** (KEP-010) |
 | D1 | Keputusan komersial PART D (gateway, trial, notifikasi, repo, SSO) | ✅ **Diputuskan** (KEP-011) |
-| D2 | Reset data produksi ke nol | ✅ **Diputuskan** (KEP-012) — skrip siap, menunggu dijalankan |
+| D2 | Reset data produksi ke nol | ✅ **DILAKSANAKAN** (KEP-012) — dikonfirmasi pemilik 2026-08-06 |
+| P1 | Rencana migrasi Fase 1B | ✅ **Tersusun & disetujui** — `docs/RENCANA-MIGRASI-1B.md` |
+| P2 | Implementasi Fase 1B (8 migrasi + 12 berkas kode) | ✅ **DITULIS** — menunggu dijalankan ke database |
+| S1 | 3 kebocoran baru dari audit `SECURITY DEFINER` | ✅ **Ditutup** di 0030/0031 — lihat KEP-013 |
 | — | Ground truth skema produksi | ✅ **Diterima & terverifikasi** |
 | — | `PRD-POS-Multi-Cabang-v2.md` — baseline regresi | ✅ **Diterima & direkonsiliasi** |
 | — | PROD vs STAGING | ✅ Terjawab: `qeoeqspinyydcmoysbrb` = **PRODUKSI** |
@@ -812,8 +815,32 @@ Kalau salah satu hilang, sistem rusak — semuanya konsekuensi langsung dari KEP
 | Yang dipertahankan | Kalau hilang |
 |---|---|
 | `branches` id `…c1` | 7 kolom ber-`DEFAULT` + FK ke sini → **setiap INSERT gagal**; 13 RPC memakai `v_main`; `MAIN_BRANCH_ID` di `lib/constants.ts` |
-| ≥1 `auth.users` + `profiles` `is_master_admin` | **Tidak ada yang bisa login**; master admin pertama hanya bisa dibuat manual lewat SQL |
+| **Tepat satu** `auth.users` + `profiles` `is_master_admin` | **Tidak ada yang bisa login**; pemulihan hanya lewat SQL manual |
 | 1 baris `store_settings` + `org_settings` | Dibaca `.limit(1).maybeSingle()` di 17 titik → `null` → layout, kasir, struk, invoice berpotensi rusak |
+
+### Penghapusan akun (Bagian 2e) — bagian paling berbahaya
+Atas permintaan pemilik, **seluruh akun dihapus kecuali satu master admin**.
+
+Peta FK sudah diverifikasi dari `docs/schema-dump/03-constraints.csv`:
+
+| Pola | FK |
+|---|---|
+| **Tanpa `ON DELETE`** (menghalangi) | `transactions.cashier_id`, `transactions.voided_by`, `cash_sessions.cashier_id`, `cash_expenses.created_by` |
+| `ON DELETE CASCADE` | `profiles.id → auth.users`, `branch_memberships.user_id`, `notifications.user_id` |
+| `ON DELETE SET NULL` | 13 FK lainnya (`audit_logs.actor_id`, `approvals.*`, `stock_*.created_by`, dll.) |
+
+Keempat FK tanpa `ON DELETE` menunjuk ke tabel yang **sudah dikosongkan di Bagian 1**, sehingga
+penghapusan akun tidak tertahan. **Kalau Bagian 1 dilewati, Bagian 2e akan gagal** — dan itu
+memang disengaja sebagai pengaman urutan.
+
+Dua pengaman di dalam blok `DO`:
+1. Dibatalkan bila akun yang akan disimpan **tidak ditemukan**
+2. Dibatalkan bila akun terpilih **bukan master admin aktif** — mencegah skenario "akun tersisa
+   ternyata kasir, dan tidak ada yang bisa mengelola sistem"
+
+Akun yang disimpan dipilih lewat `v_keep_email`; bila dibiarkan `NULL`, otomatis memilih master
+admin aktif **tertua**. Bagian 0 menampilkan tabel bertanda `>>> DISIMPAN <<<` / `dihapus`
+supaya bisa diperiksa **sebelum** apa pun terhapus.
 
 ### Kendala teknis yang ditangani skrip
 `guard_append_only()` menolak `DELETE` **tanpa syarat, untuk semua peran** — sehingga
@@ -857,9 +884,68 @@ wajib, dan setiap migrasi harus lolos di staging sebelum menyentuh PROD. Jangan 
 - [ ] Uji kering: Bagian 1–2 dengan `ROLLBACK;`
 - [ ] Jalankan sungguhan dengan `COMMIT;`
 - [ ] Jalankan Bagian 3 — **pastikan 2 trigger append-only kembali terpasang**
+- [ ] Bagian 3 juga harus menunjukkan **tepat 1 akun tersisa**, master admin, aktif
+- [ ] Setelah reset: **coba login** sebelum melanjutkan apa pun
 - [ ] Bersihkan foto produk yatim di Storage (manual, atau biarkan sampai KEP-007)
-- [ ] Akun karyawan uji dibersihkan manual lewat Dashboard → Authentication (opsional)
 - [ ] Perbarui `supabase/seed.sql` bila ingin data awal berbeda
+
+### Efek samping yang menguntungkan
+Dengan tersisa **satu akun master admin**, pertanyaan Handoff §7.2 ("siapa owner workspace
+existing") **terjawab dengan sendirinya** — akun itulah owner-nya. Blok B di
+`kuesioner-keputusan.sql` tidak diperlukan lagi.
+
+---
+
+## KEP-013 — Kebocoran yang ditemukan saat implementasi Fase 1B
+
+**Tanggal:** 2026-08-06 · **Status:** ✅ Ditutup di migrasi 0030–0031
+**Tidak ada di PRD, Handoff, maupun rencana awal.** Muncul hanya setelah membaca definisi
+fungsi yang sebenarnya berjalan di produksi.
+
+### Akar masalah bersama
+`SECURITY DEFINER` **menembus RLS**. Guard workspace di lapisan policy (0031 §3) tidak berlaku
+di dalam fungsi semacam itu — filternya harus eksplisit di dalam badan fungsi.
+
+### 1. `has_branch_role()` / `has_branch_permission()` — jalan pintas terbesar
+Keduanya diawali `is_master_admin() or …`. Karena fungsi itu **global**, ia memotong seluruh
+pemeriksaan cabang di **setiap RPC**. Master Admin workspace A lolos untuk cabang mana pun,
+termasuk milik workspace B — dan seluruh RPC (checkout, stok, transfer, wastage) memakainya.
+
+**Perbaikan (0031 §1):** `is_master_admin()` kini harus disertai bukti bahwa cabang yang diminta
+berada di workspace pemanggil. Satu perbaikan di dua helper menutup semua RPC sekaligus — jauh
+lebih aman daripada menambal 13 fungsi satu per satu.
+
+### 2. `dashboard_kpis()` & `dashboard_analytics()` — omzet lintas tenant
+Keduanya `SECURITY DEFINER` dengan penjaga `is_admin()` saja. Saat `p_branch_id` NULL — kondisi
+normal untuk dashboard konsolidasi — keduanya **menjumlahkan seluruh transaksi lintas workspace**.
+Admin UMKM A melihat omzet seluruh pelanggan platform.
+
+**Perbaikan (0031 §2):** 17 filter cabang ditambahi guard workspace.
+
+### 3. `branch_seq_gaps()` — audit nomor urut lintas tenant
+Mengagregasi celah nomor urut seluruh cabang tanpa filter workspace. Modul Keamanan workspace A
+menampilkan data workspace B. **Perbaikan (0031 §2):** filter workspace pada join `branches`.
+
+### 4. `sync_branch_products_insert()` — katalog bocor lintas tenant
+`insert … select b.id … from public.branches b` **tanpa filter apa pun**: produk baru workspace A
+otomatis dibuatkan baris `branch_products` di **seluruh cabang workspace B**.
+**Perbaikan (0030):** `where b.workspace_id = new.workspace_id`.
+
+### 5. `lib/alerts.ts` — peringatan anti-fraud salah alamat
+Memakai service-role (menembus RLS) dan mengambil **seluruh** master admin secara global.
+Peringatan anti-fraud UMKM A terkirim ke pemilik UMKM B **beserta isinya**.
+**Perbaikan:** penerima dibatasi anggota workspace cabang pemicu; `org_settings` juga difilter.
+
+### 6. Bug pelaporan yang sudah berjalan — ikut diperbaiki
+`dashboard_analytics.expenses_total` memfilter `cash_expenses.branch_id`, padahal kolom itu
+**tidak pernah diisi** kode (selalu `…c1`, lihat KEP-009). Akibatnya **manajer cabang selain
+pusat melihat `expenses_total = 0`** padahal ada pengeluaran.
+
+> Ini mengoreksi kesimpulan audit KEP-009 yang menyebut cacat `cash_expenses.branch_id` sebagai
+> "laten, tidak terlihat pengguna". Ternyata terlihat — di dashboard.
+
+**Perbaikan (0031 §2):** di-join lewat `cash_sessions`, sekaligus menutup kebocoran dan
+membetulkan angkanya.
 
 ---
 ---
@@ -920,12 +1006,12 @@ Ini sekarang menjadi **penghalang eksekusi nomor satu** — bukan lagi keputusan
 
 | Sumber | Pertanyaan | Status |
 |---|---|---|
-| PRD §4C.6 langkah 3 | Berapa UMKM di prod? | ✅ **Terjawab: NOL.** Data direset (KEP-012), jadi tidak ada data lama untuk dimigrasi |
-| Handoff §7.2 | Owner workspace — akun mana? | ⬜ **Masih perlu.** Dari nol pun harus ada satu Master Admin. Jalankan **Blok B** di [`kuesioner-keputusan.sql`](kuesioner-keputusan.sql) — daftar akun + email + terakhir login |
+| PRD §4C.6 langkah 3 | Berapa UMKM di prod? | ✅ **Terjawab: NOL.** Data direset (KEP-012) |
+| Handoff §7.2 | Owner workspace — akun mana? | ✅ **Terjawab dengan sendirinya.** Reset menyisakan **tepat satu** akun master admin — itulah owner-nya |
 
-> Blok A (volume tabel) dan Blok C (inventaris cabang) **tidak relevan lagi** setelah reset —
-> semuanya akan menjadi nol. Blok D dan E juga gugur. Yang tersisa hanya **Blok B** dan
-> **Blok F** (cek PITR).
+> ⚠️ **Seluruh `kuesioner-keputusan.sql` sudah tidak relevan.** Blok A–E gugur karena data
+> direset ke nol; Blok B gugur karena hanya tersisa satu akun. Yang tersisa hanya
+> **Blok F — cek PITR**, dan itu dilakukan manual di Dashboard, bukan lewat SQL.
 
 ## 5. Prasyarat wajib sebelum menyentuh apa pun (Handoff §5)
 
@@ -933,7 +1019,7 @@ Ini sekarang menjadi **penghalang eksekusi nomor satu** — bukan lagi keputusan
 |---|---|---|
 | 1 | **Backup sebelum reset** | 🔴 **lakukan SEKARANG** — Dashboard → Database → Backups |
 | 2 | Jalankan `supabase/reset-dev-data.sql` (KEP-012) | ⬜ Bagian 0 → uji kering → COMMIT → verifikasi |
-| 3 | Blok B — pilih akun owner workspace | ⬜ satu-satunya query yang masih relevan |
+| 3 | **Coba login** setelah reset, sebelum melanjutkan | ⬜ pembuktian akhir bahwa sistem masih hidup |
 | 4 | Branch git `feat/multi-tenant` | ⬜ masih di `main` |
 | 5 | **PITR aktif di PROD** | ⬜ cek Dashboard → Settings → Add-ons |
 | 6 | Onboarding merchant Midtrans | ⬜ mulai paralel, jangan tunggu Fase 3 |

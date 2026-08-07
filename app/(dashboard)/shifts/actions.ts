@@ -30,6 +30,7 @@ export async function openShift(raw: unknown): Promise<ShiftActionResult> {
 
   const ctx = await getBranchContext();
   if (!ctx.activeBranchId) return { error: "Cabang aktif tidak ditemukan" };
+  if (!ctx.workspaceId) return { error: "Workspace tidak ditemukan" };
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -37,6 +38,9 @@ export async function openShift(raw: unknown): Promise<ShiftActionResult> {
     .insert({
       cashier_id: userId,
       branch_id: ctx.activeBranchId,
+      // Trigger set_workspace_from_branch() juga menurunkannya dari branch_id;
+      // dikirim eksplisit agar tipe terpenuhi dan niatnya terbaca.
+      workspace_id: ctx.workspaceId,
       opening_balance: parsed.data.opening_balance,
       status: "open",
     })
@@ -154,7 +158,7 @@ export async function addExpense(raw: unknown): Promise<ShiftActionResult> {
   const supabase = await createClient();
   const { data: session } = await supabase
     .from("cash_sessions")
-    .select("id")
+    .select("id, branch_id")
     .eq("cashier_id", userId)
     .eq("status", "open")
     .maybeSingle();
@@ -165,6 +169,11 @@ export async function addExpense(raw: unknown): Promise<ShiftActionResult> {
     .from("cash_expenses")
     .insert({
       cash_session_id: session.id,
+      // WAJIB sejak KEP-009: DEFAULT '…c1' pada kolom ini sudah dicabut di
+      // migrasi 0030. Sebelumnya kolom ini TIDAK PERNAH diisi sehingga setiap
+      // pengeluaran tercatat di Cabang Pusat, apa pun cabang kasirnya — yang
+      // membuat dashboard_analytics.expenses_total selalu 0 untuk cabang lain.
+      branch_id: session.branch_id,
       amount: parsed.data.amount,
       category: parsed.data.category,
       source: parsed.data.source,

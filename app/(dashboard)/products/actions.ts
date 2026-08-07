@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getSession } from "@/lib/auth";
+import { getBranchContext } from "@/lib/branch";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 import {
@@ -41,11 +42,16 @@ export async function createProduct(
   }
   const d = parsed.data;
 
+  // Katalog global tanpa branch_id → workspace_id wajib eksplisit (KEP-003).
+  const ctx = await getBranchContext();
+  if (!ctx.workspaceId) return { error: "Workspace tidak ditemukan" };
+
   const supabase = await createClient();
   // Harga jual & stok master = 0; harga/stok riil diatur per cabang.
   const { data: inserted, error } = await supabase
     .from("products")
     .insert({
+      workspace_id: ctx.workspaceId,
       name: d.name,
       sku: d.sku,
       barcode: nullify(d.barcode),

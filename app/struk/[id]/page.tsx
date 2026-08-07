@@ -44,17 +44,21 @@ export default async function PublicReceiptPage({
   const { data: trx } = await supabase
     .from("transactions")
     .select(
-      "code, created_at, customer_name, subtotal, discount_total, tax_total, shipping_cost, grand_total, status, transaction_items(product_name_snapshot, qty, unit_price, discount, line_total), payments(method, bank, amount, cash_received, change_given, reference)",
+      "code, created_at, customer_name, subtotal, discount_total, tax_total, shipping_cost, grand_total, status, workspace_id, transaction_items(product_name_snapshot, qty, unit_price, discount, line_total), payments(method, bank, amount, cash_received, change_given, reference)",
     )
     .eq("id", id)
     .maybeSingle();
 
   if (!trx) notFound();
 
+  // KEP-003: halaman ini publik dan memakai service-role, sehingga MENEMBUS
+  // RLS. Identitas toko WAJIB diturunkan dari workspace transaksinya — bukan
+  // `.limit(1)`. Tanpa ini, struk bisa menampilkan nama toko, logo, dan gambar
+  // QRIS milik UMKM lain, dan pelanggan mentransfer ke rekening yang salah.
   const { data: store } = await supabase
     .from("store_settings")
     .select("store_name, address, phone, receipt_footer")
-    .limit(1)
+    .eq("workspace_id", trx.workspace_id)
     .maybeSingle();
 
   const status = trx.status as Status;

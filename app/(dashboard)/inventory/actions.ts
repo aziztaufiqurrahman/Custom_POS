@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getSession } from "@/lib/auth";
-import { getBranchContext, MAIN_BRANCH_ID } from "@/lib/branch";
+import { getBranchContext } from "@/lib/branch";
 import { can } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { notifyRisky } from "@/lib/alerts";
@@ -31,14 +31,16 @@ export async function restockProduct(raw: unknown): Promise<InvResult> {
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Input tidak valid" };
   const d = parsed.data;
 
-  // Inventory dikunci ke Pusat (master admin only).
+  // Inventory dikunci ke Cabang Pusat workspace ini (KEP-009).
+  const ctx = await getBranchContext();
+  if (!ctx.mainBranchId) return { error: "Cabang Pusat tidak ditemukan" };
   const supabase = await createClient();
   const { error } = await supabase.rpc("restock_product", {
     p_product_id: d.product_id,
     p_qty: d.qty,
     p_new_cost: d.new_cost ?? undefined,
     p_note: d.note || undefined,
-    p_branch_id: MAIN_BRANCH_ID,
+    p_branch_id: ctx.mainBranchId,
   });
   if (error) return { error: rpcError(error.message) };
 
@@ -57,13 +59,15 @@ export async function adjustStock(raw: unknown): Promise<InvResult> {
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Input tidak valid" };
   const d = parsed.data;
 
-  // Inventory dikunci ke Pusat (master admin only).
+  // Inventory dikunci ke Cabang Pusat workspace ini (KEP-009).
+  const ctx = await getBranchContext();
+  if (!ctx.mainBranchId) return { error: "Cabang Pusat tidak ditemukan" };
   const supabase = await createClient();
   const { error } = await supabase.rpc("adjust_stock", {
     p_product_id: d.product_id,
     p_new_qty: d.new_qty,
     p_note: d.note || undefined,
-    p_branch_id: MAIN_BRANCH_ID,
+    p_branch_id: ctx.mainBranchId,
   });
   if (error) return { error: rpcError(error.message) };
 
@@ -99,7 +103,7 @@ export async function createOpname(): Promise<InvResult> {
   // Master admin melakukan opname di Pusat (Inventory terkunci); manajer di
   // cabangnya sendiri.
   const ctx = await getBranchContext();
-  const branchId = ctx.isMasterAdmin ? MAIN_BRANCH_ID : ctx.activeBranchId;
+  const branchId = ctx.isMasterAdmin ? ctx.mainBranchId : ctx.activeBranchId;
   if (!branchId) return { error: "Cabang aktif tidak ditemukan" };
 
   const { data, error } = await supabase
@@ -159,7 +163,7 @@ export async function completeOpname(raw: unknown): Promise<InvResult> {
   const changed = (data as { changed?: number } | null)?.changed ?? 0;
   if (changed > 0) {
     const ctx = await getBranchContext();
-    const branchId = ctx.isMasterAdmin ? MAIN_BRANCH_ID : ctx.activeBranchId;
+    const branchId = ctx.isMasterAdmin ? ctx.mainBranchId : ctx.activeBranchId;
     if (branchId) {
       const bname =
         ctx.branches.find((b) => b.id === branchId)?.name ??

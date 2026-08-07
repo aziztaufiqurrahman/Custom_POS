@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getSession } from "@/lib/auth";
+import { getBranchContext } from "@/lib/branch";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 import { branchSchema, updateBranchSchema } from "@/lib/validations/branch";
@@ -20,10 +21,17 @@ export async function createBranch(raw: unknown): Promise<BranchActionResult> {
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Input tidak valid" };
   const d = parsed.data;
 
+  // `branches` adalah jangkar tenant: workspace_id NOT NULL di PROD (0028) dan
+  // tidak punya trigger penurun — wajib dikirim, kalau tidak insert ditolak.
+  const ctx = await getBranchContext();
+  const workspaceId = ctx.workspaceId;
+  if (!workspaceId) return { error: "Workspace tidak ditemukan" };
+
   const supabase = await createClient();
   const { data: branch, error } = await supabase
     .from("branches")
     .insert({
+      workspace_id: workspaceId,
       code: d.code.toUpperCase(),
       name: d.name,
       address: d.address || null,
@@ -49,6 +57,7 @@ export async function createBranch(raw: unknown): Promise<BranchActionResult> {
     await supabase.from("branch_products").insert(
       products.map((p) => ({
         branch_id: branch.id,
+        workspace_id: workspaceId,
         product_id: p.id,
         price: p.sell_price,
         min_stock: p.min_stock,

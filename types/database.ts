@@ -12,6 +12,974 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  platform: {
+    Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          actor_id: string | null
+          after: Json | null
+          before: Json | null
+          created_at: string
+          entity: string | null
+          entity_id: string | null
+          id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          after?: Json | null
+          before?: Json | null
+          created_at?: string
+          entity?: string | null
+          entity_id?: string | null
+          id?: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          after?: Json | null
+          before?: Json | null
+          created_at?: string
+          entity?: string | null
+          entity_id?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      bundle_items: {
+        Row: {
+          bundle_id: string
+          id: string
+          plan_id: string
+          product_id: string
+        }
+        Insert: {
+          bundle_id: string
+          id?: string
+          plan_id: string
+          product_id: string
+        }
+        Update: {
+          bundle_id?: string
+          id?: string
+          plan_id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bundle_items_bundle_id_fkey"
+            columns: ["bundle_id"]
+            isOneToOne: false
+            referencedRelation: "bundles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bundle_items_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bundle_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bundles: {
+        Row: {
+          billing_period: Database["platform"]["Enums"]["billing_period"]
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          billing_period?: Database["platform"]["Enums"]["billing_period"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          price?: number
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          billing_period?: Database["platform"]["Enums"]["billing_period"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      coupons: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          type: Database["platform"]["Enums"]["coupon_type"]
+          updated_at: string
+          used_count: number
+          valid_from: string | null
+          valid_until: string | null
+          value: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          type: Database["platform"]["Enums"]["coupon_type"]
+          updated_at?: string
+          used_count?: number
+          valid_from?: string | null
+          valid_until?: string | null
+          value: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          type?: Database["platform"]["Enums"]["coupon_type"]
+          updated_at?: string
+          used_count?: number
+          valid_from?: string | null
+          valid_until?: string | null
+          value?: number
+        }
+        Relationships: []
+      }
+      entitlements: {
+        Row: {
+          created_at: string
+          id: string
+          limits: Json
+          plan_id: string | null
+          product_id: string
+          status: Database["platform"]["Enums"]["entitlement_status"]
+          updated_at: string
+          valid_until: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          limits?: Json
+          plan_id?: string | null
+          product_id: string
+          status?: Database["platform"]["Enums"]["entitlement_status"]
+          updated_at?: string
+          valid_until?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          limits?: Json
+          plan_id?: string | null
+          product_id?: string
+          status?: Database["platform"]["Enums"]["entitlement_status"]
+          updated_at?: string
+          valid_until?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entitlements_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entitlements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entitlements_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          id: string
+          issued_at: string
+          number: string
+          order_id: string
+          pdf_url: string | null
+        }
+        Insert: {
+          id?: string
+          issued_at?: string
+          number: string
+          order_id: string
+          pdf_url?: string | null
+        }
+        Update: {
+          id?: string
+          issued_at?: string
+          number?: string
+          order_id?: string
+          pdf_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_items: {
+        Row: {
+          addon_type: Database["platform"]["Enums"]["addon_type"] | null
+          bundle_id: string | null
+          id: string
+          item_type: Database["platform"]["Enums"]["order_item_type"]
+          line_total: number
+          order_id: string
+          plan_id: string | null
+          product_id: string | null
+          qty: number
+          unit_price: number
+        }
+        Insert: {
+          addon_type?: Database["platform"]["Enums"]["addon_type"] | null
+          bundle_id?: string | null
+          id?: string
+          item_type: Database["platform"]["Enums"]["order_item_type"]
+          line_total?: number
+          order_id: string
+          plan_id?: string | null
+          product_id?: string | null
+          qty?: number
+          unit_price?: number
+        }
+        Update: {
+          addon_type?: Database["platform"]["Enums"]["addon_type"] | null
+          bundle_id?: string | null
+          id?: string
+          item_type?: Database["platform"]["Enums"]["order_item_type"]
+          line_total?: number
+          order_id?: string
+          plan_id?: string | null
+          product_id?: string | null
+          qty?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_bundle_id_fkey"
+            columns: ["bundle_id"]
+            isOneToOne: false
+            referencedRelation: "bundles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          code: string
+          coupon_id: string | null
+          created_at: string
+          discount: number
+          id: string
+          paid_at: string | null
+          status: Database["platform"]["Enums"]["order_status"]
+          subtotal: number
+          tax: number
+          total: number
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          code: string
+          coupon_id?: string | null
+          created_at?: string
+          discount?: number
+          id?: string
+          paid_at?: string | null
+          status?: Database["platform"]["Enums"]["order_status"]
+          subtotal?: number
+          tax?: number
+          total?: number
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          code?: string
+          coupon_id?: string | null
+          created_at?: string
+          discount?: number
+          id?: string
+          paid_at?: string | null
+          status?: Database["platform"]["Enums"]["order_status"]
+          subtotal?: number
+          tax?: number
+          total?: number
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_webhook_events: {
+        Row: {
+          event_id: string
+          gateway: Database["platform"]["Enums"]["gateway"]
+          id: string
+          order_ref: string | null
+          payload: Json | null
+          processed: boolean
+          received_at: string
+          signature_verified: boolean
+        }
+        Insert: {
+          event_id: string
+          gateway: Database["platform"]["Enums"]["gateway"]
+          id?: string
+          order_ref?: string | null
+          payload?: Json | null
+          processed?: boolean
+          received_at?: string
+          signature_verified?: boolean
+        }
+        Update: {
+          event_id?: string
+          gateway?: Database["platform"]["Enums"]["gateway"]
+          id?: string
+          order_ref?: string | null
+          payload?: Json | null
+          processed?: boolean
+          received_at?: string
+          signature_verified?: boolean
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          gateway: Database["platform"]["Enums"]["gateway"]
+          gateway_ref: string | null
+          id: string
+          method: string | null
+          order_id: string
+          paid_at: string | null
+          raw_payload: Json | null
+          status: Database["platform"]["Enums"]["payment_status"]
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          gateway?: Database["platform"]["Enums"]["gateway"]
+          gateway_ref?: string | null
+          id?: string
+          method?: string | null
+          order_id: string
+          paid_at?: string | null
+          raw_payload?: Json | null
+          status?: Database["platform"]["Enums"]["payment_status"]
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          gateway?: Database["platform"]["Enums"]["gateway"]
+          gateway_ref?: string | null
+          id?: string
+          method?: string | null
+          order_id?: string
+          paid_at?: string | null
+          raw_payload?: Json | null
+          status?: Database["platform"]["Enums"]["payment_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plans: {
+        Row: {
+          billing_period: Database["platform"]["Enums"]["billing_period"]
+          created_at: string
+          currency: string
+          features: Json
+          id: string
+          is_active: boolean
+          limits: Json
+          name: string
+          price: number
+          product_id: string
+          sort_order: number
+          tier: string
+          updated_at: string
+        }
+        Insert: {
+          billing_period?: Database["platform"]["Enums"]["billing_period"]
+          created_at?: string
+          currency?: string
+          features?: Json
+          id?: string
+          is_active?: boolean
+          limits?: Json
+          name: string
+          price?: number
+          product_id: string
+          sort_order?: number
+          tier: string
+          updated_at?: string
+        }
+        Update: {
+          billing_period?: Database["platform"]["Enums"]["billing_period"]
+          created_at?: string
+          currency?: string
+          features?: Json
+          id?: string
+          is_active?: boolean
+          limits?: Json
+          name?: string
+          price?: number
+          product_id?: string
+          sort_order?: number
+          tier?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plans_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+          status: Database["platform"]["Enums"]["product_status"]
+          tagline: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+          status?: Database["platform"]["Enums"]["product_status"]
+          tagline?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          status?: Database["platform"]["Enums"]["product_status"]
+          tagline?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      provisioning_jobs: {
+        Row: {
+          attempts: number
+          created_at: string
+          error: string | null
+          id: string
+          order_id: string | null
+          product_id: string
+          status: Database["platform"]["Enums"]["provisioning_status"]
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          order_id?: string | null
+          product_id: string
+          status?: Database["platform"]["Enums"]["provisioning_status"]
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          order_id?: string | null
+          product_id?: string
+          status?: Database["platform"]["Enums"]["provisioning_status"]
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provisioning_jobs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provisioning_jobs_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provisioning_jobs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_addons: {
+        Row: {
+          addon_type: Database["platform"]["Enums"]["addon_type"]
+          billing_period: Database["platform"]["Enums"]["billing_period"]
+          created_at: string
+          id: string
+          qty: number
+          status: Database["platform"]["Enums"]["addon_status"]
+          subscription_id: string
+          unit_price: number
+          updated_at: string
+          valid_until: string | null
+          workspace_id: string
+        }
+        Insert: {
+          addon_type: Database["platform"]["Enums"]["addon_type"]
+          billing_period?: Database["platform"]["Enums"]["billing_period"]
+          created_at?: string
+          id?: string
+          qty?: number
+          status?: Database["platform"]["Enums"]["addon_status"]
+          subscription_id: string
+          unit_price?: number
+          updated_at?: string
+          valid_until?: string | null
+          workspace_id: string
+        }
+        Update: {
+          addon_type?: Database["platform"]["Enums"]["addon_type"]
+          billing_period?: Database["platform"]["Enums"]["billing_period"]
+          created_at?: string
+          id?: string
+          qty?: number
+          status?: Database["platform"]["Enums"]["addon_status"]
+          subscription_id?: string
+          unit_price?: number
+          updated_at?: string
+          valid_until?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_addons_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_addons_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          auto_renew: boolean
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string
+          id: string
+          order_id: string | null
+          plan_id: string
+          product_id: string
+          status: Database["platform"]["Enums"]["subscription_status"]
+          trial_ends_at: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          auto_renew?: boolean
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string
+          id?: string
+          order_id?: string | null
+          plan_id: string
+          product_id: string
+          status?: Database["platform"]["Enums"]["subscription_status"]
+          trial_ends_at?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          auto_renew?: boolean
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string
+          id?: string
+          order_id?: string | null
+          plan_id?: string
+          product_id?: string
+          status?: Database["platform"]["Enums"]["subscription_status"]
+          trial_ends_at?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      usage_counters: {
+        Row: {
+          computed_at: string
+          id: string
+          metric: Database["platform"]["Enums"]["usage_metric"]
+          period_end: string
+          period_start: string
+          product_id: string
+          value: number
+          workspace_id: string
+        }
+        Insert: {
+          computed_at?: string
+          id?: string
+          metric: Database["platform"]["Enums"]["usage_metric"]
+          period_end: string
+          period_start: string
+          product_id: string
+          value?: number
+          workspace_id: string
+        }
+        Update: {
+          computed_at?: string
+          id?: string
+          metric?: Database["platform"]["Enums"]["usage_metric"]
+          period_end?: string
+          period_start?: string
+          product_id?: string
+          value?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_counters_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usage_counters_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      waitlist: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          product_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          product_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          product_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waitlist_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_members: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          role: Database["platform"]["Enums"]["member_role"]
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          role?: Database["platform"]["Enums"]["member_role"]
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          role?: Database["platform"]["Enums"]["member_role"]
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspaces: {
+        Row: {
+          address: string | null
+          created_at: string
+          id: string
+          logo_url: string | null
+          name: string
+          owner_id: string
+          phone: string | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name: string
+          owner_id: string
+          phone?: string | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name?: string
+          owner_id?: string
+          phone?: string | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      current_workspace_id: { Args: never; Returns: string }
+      expire_overdue_subscriptions: { Args: never; Returns: number }
+      has_active_entitlement: {
+        Args: { product_slug: string; ws: string }
+        Returns: boolean
+      }
+      is_staff: { Args: never; Returns: boolean }
+      is_workspace_member: { Args: { ws: string }; Returns: boolean }
+      kasir_access: { Args: { ws: string }; Returns: Json }
+      limit_of: {
+        Args: { key: string; product_slug: string; ws: string }
+        Returns: number
+      }
+      provision_workspace: {
+        Args: {
+          p_billing_period?: string
+          p_branch_code?: string
+          p_branch_name?: string
+          p_owner_id: string
+          p_slug?: string
+          p_tier?: string
+          p_workspace_name: string
+        }
+        Returns: string
+      }
+      recalc_entitlement: {
+        Args: { prod: string; ws: string }
+        Returns: undefined
+      }
+      user_workspace_ids: { Args: never; Returns: string[] }
+      workspace_role: {
+        Args: { ws: string }
+        Returns: Database["platform"]["Enums"]["member_role"]
+      }
+    }
+    Enums: {
+      addon_status: "active" | "cancelled"
+      addon_type: "branch" | "seat" | "storage"
+      billing_period: "monthly" | "annual"
+      coupon_type: "percent" | "amount"
+      entitlement_status: "active" | "inactive" | "suspended"
+      gateway: "midtrans" | "xendit"
+      member_role: "owner" | "admin" | "member"
+      order_item_type: "plan" | "bundle" | "addon"
+      order_status:
+        | "pending"
+        | "paid"
+        | "expired"
+        | "failed"
+        | "cancelled"
+        | "refunded"
+      payment_status: "pending" | "paid" | "expired" | "failed" | "refunded"
+      product_status: "available" | "coming_soon"
+      provisioning_status: "pending" | "running" | "done" | "failed"
+      staff_role: "super_admin" | "finance" | "support" | "marketing"
+      subscription_status:
+        | "trialing"
+        | "active"
+        | "past_due"
+        | "suspended"
+        | "cancelled"
+        | "expired"
+      usage_metric: "tx_count" | "storage_mb"
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       approvals: {
@@ -150,7 +1118,7 @@ export type Database = {
           account_name?: string
           account_number?: string
           bank: string
-          branch_id?: string
+          branch_id: string
           created_at?: string
           id?: string
           is_active?: boolean
@@ -235,6 +1203,7 @@ export type Database = {
           product_id: string
           stock: number
           updated_at: string
+          workspace_id: string
         }
         Insert: {
           branch_id: string
@@ -246,6 +1215,7 @@ export type Database = {
           product_id: string
           stock?: number
           updated_at?: string
+          workspace_id: string
         }
         Update: {
           branch_id?: string
@@ -257,6 +1227,7 @@ export type Database = {
           product_id?: string
           stock?: number
           updated_at?: string
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -348,10 +1319,12 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          is_main: boolean
           name: string
           phone: string | null
           timezone: string
           updated_at: string
+          workspace_id: string
         }
         Insert: {
           address?: string | null
@@ -359,10 +1332,12 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          is_main?: boolean
           name: string
           phone?: string | null
           timezone?: string
           updated_at?: string
+          workspace_id: string
         }
         Update: {
           address?: string | null
@@ -370,10 +1345,12 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          is_main?: boolean
           name?: string
           phone?: string | null
           timezone?: string
           updated_at?: string
+          workspace_id?: string
         }
         Relationships: []
       }
@@ -391,7 +1368,7 @@ export type Database = {
         }
         Insert: {
           amount: number
-          branch_id?: string
+          branch_id: string
           cash_session_id: string
           category?: string
           created_at?: string
@@ -525,9 +1502,10 @@ export type Database = {
           total_transfer: number
           updated_at: string
           variance: number | null
+          workspace_id: string
         }
         Insert: {
-          branch_id?: string
+          branch_id: string
           cashier_id: string
           closed_at?: string | null
           counted_cash?: number | null
@@ -547,6 +1525,7 @@ export type Database = {
           total_transfer?: number
           updated_at?: string
           variance?: number | null
+          workspace_id: string
         }
         Update: {
           branch_id?: string
@@ -569,6 +1548,7 @@ export type Database = {
           total_transfer?: number
           updated_at?: string
           variance?: number | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -593,18 +1573,21 @@ export type Database = {
           id: string
           name: string
           parent_id: string | null
+          workspace_id: string
         }
         Insert: {
           created_at?: string
           id?: string
           name: string
           parent_id?: string | null
+          workspace_id: string
         }
         Update: {
           created_at?: string
           id?: string
           name?: string
           parent_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -778,6 +1761,7 @@ export type Database = {
           title: string
           type: string
           user_id: string
+          workspace_id: string
         }
         Insert: {
           body?: string | null
@@ -788,6 +1772,7 @@ export type Database = {
           title: string
           type?: string
           user_id: string
+          workspace_id: string
         }
         Update: {
           body?: string | null
@@ -798,6 +1783,7 @@ export type Database = {
           title?: string
           type?: string
           user_id?: string
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -819,6 +1805,7 @@ export type Database = {
           logo_url: string | null
           org_name: string
           updated_at: string
+          workspace_id: string
         }
         Insert: {
           alert_whatsapp?: string | null
@@ -829,6 +1816,7 @@ export type Database = {
           logo_url?: string | null
           org_name?: string
           updated_at?: string
+          workspace_id: string
         }
         Update: {
           alert_whatsapp?: string | null
@@ -839,6 +1827,7 @@ export type Database = {
           logo_url?: string | null
           org_name?: string
           updated_at?: string
+          workspace_id?: string
         }
         Relationships: []
       }
@@ -854,11 +1843,12 @@ export type Database = {
           method: Database["public"]["Enums"]["payment_method"]
           reference: string | null
           transaction_id: string
+          workspace_id: string
         }
         Insert: {
           amount: number
           bank?: string | null
-          branch_id?: string
+          branch_id: string
           cash_received?: number | null
           change_given?: number | null
           created_at?: string
@@ -866,6 +1856,7 @@ export type Database = {
           method: Database["public"]["Enums"]["payment_method"]
           reference?: string | null
           transaction_id: string
+          workspace_id: string
         }
         Update: {
           amount?: number
@@ -878,6 +1869,7 @@ export type Database = {
           method?: Database["public"]["Enums"]["payment_method"]
           reference?: string | null
           transaction_id?: string
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -920,6 +1912,7 @@ export type Database = {
           supplier: string | null
           unit: string
           updated_at: string
+          workspace_id: string
         }
         Insert: {
           barcode?: string | null
@@ -944,6 +1937,7 @@ export type Database = {
           supplier?: string | null
           unit?: string
           updated_at?: string
+          workspace_id: string
         }
         Update: {
           barcode?: string | null
@@ -968,6 +1962,7 @@ export type Database = {
           supplier?: string | null
           unit?: string
           updated_at?: string
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -987,9 +1982,11 @@ export type Database = {
           id: string
           is_active: boolean
           is_master_admin: boolean
+          is_staff: boolean
           permissions: string[]
           phone: string | null
           role: Database["public"]["Enums"]["user_role"]
+          staff_role: Database["platform"]["Enums"]["staff_role"] | null
           updated_at: string
         }
         Insert: {
@@ -999,9 +1996,11 @@ export type Database = {
           id: string
           is_active?: boolean
           is_master_admin?: boolean
+          is_staff?: boolean
           permissions?: string[]
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          staff_role?: Database["platform"]["Enums"]["staff_role"] | null
           updated_at?: string
         }
         Update: {
@@ -1011,9 +2010,11 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_master_admin?: boolean
+          is_staff?: boolean
           permissions?: string[]
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          staff_role?: Database["platform"]["Enums"]["staff_role"] | null
           updated_at?: string
         }
         Relationships: []
@@ -1034,7 +2035,7 @@ export type Database = {
           type: Database["public"]["Enums"]["movement_type"]
         }
         Insert: {
-          branch_id?: string
+          branch_id: string
           created_at?: string
           created_by?: string | null
           id?: string
@@ -1156,7 +2157,7 @@ export type Database = {
           status: Database["public"]["Enums"]["opname_status"]
         }
         Insert: {
-          branch_id?: string
+          branch_id: string
           code: string
           completed_at?: string | null
           created_at?: string
@@ -1337,6 +2338,7 @@ export type Database = {
           theme_radius: string
           trx_prefix: string
           updated_at: string
+          workspace_id: string
         }
         Insert: {
           address?: string | null
@@ -1355,6 +2357,7 @@ export type Database = {
           theme_radius?: string
           trx_prefix?: string
           updated_at?: string
+          workspace_id: string
         }
         Update: {
           address?: string | null
@@ -1373,6 +2376,7 @@ export type Database = {
           theme_radius?: string
           trx_prefix?: string
           updated_at?: string
+          workspace_id?: string
         }
         Relationships: []
       }
@@ -1385,6 +2389,7 @@ export type Database = {
           note: string | null
           phone: string | null
           updated_at: string
+          workspace_id: string
         }
         Insert: {
           created_at?: string
@@ -1394,6 +2399,7 @@ export type Database = {
           note?: string | null
           phone?: string | null
           updated_at?: string
+          workspace_id: string
         }
         Update: {
           created_at?: string
@@ -1403,6 +2409,7 @@ export type Database = {
           note?: string | null
           phone?: string | null
           updated_at?: string
+          workspace_id?: string
         }
         Relationships: []
       }
@@ -1417,6 +2424,7 @@ export type Database = {
           sku_snapshot: string | null
           transaction_id: string
           unit_price: number
+          workspace_id: string
         }
         Insert: {
           discount?: number
@@ -1428,6 +2436,7 @@ export type Database = {
           sku_snapshot?: string | null
           transaction_id: string
           unit_price: number
+          workspace_id: string
         }
         Update: {
           discount?: number
@@ -1439,6 +2448,7 @@ export type Database = {
           sku_snapshot?: string | null
           transaction_id?: string
           unit_price?: number
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -1487,9 +2497,10 @@ export type Database = {
           tax_total: number
           voided_at: string | null
           voided_by: string | null
+          workspace_id: string
         }
         Insert: {
-          branch_id?: string
+          branch_id: string
           cash_session_id?: string | null
           cashier_id: string
           code: string
@@ -1510,6 +2521,7 @@ export type Database = {
           tax_total?: number
           voided_at?: string | null
           voided_by?: string | null
+          workspace_id: string
         }
         Update: {
           branch_id?: string
@@ -1533,6 +2545,7 @@ export type Database = {
           tax_total?: number
           voided_at?: string | null
           voided_by?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -1808,7 +2821,7 @@ export type Database = {
     Functions: {
       adjust_stock: {
         Args: {
-          p_branch_id?: string
+          p_branch_id: string
           p_new_qty: number
           p_note?: string
           p_product_id: string
@@ -1826,6 +2839,10 @@ export type Database = {
           missing: number
           trx_count: number
         }[]
+      }
+      can_write_workspace_storage: {
+        Args: { perm: string; ws: string }
+        Returns: boolean
       }
       close_daily: {
         Args: { p_branch_id: string; p_business_date: string }
@@ -1878,7 +2895,9 @@ export type Database = {
       }
       has_permission: { Args: { perm: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
+      is_main_branch: { Args: { b: string }; Returns: boolean }
       is_master_admin: { Args: never; Returns: boolean }
+      main_branch_of: { Args: { b: string }; Returns: string }
       receive_goods: {
         Args: {
           p_branch_id: string
@@ -1909,7 +2928,7 @@ export type Database = {
       }
       restock_product: {
         Args: {
-          p_branch_id?: string
+          p_branch_id: string
           p_new_cost?: number
           p_note?: string
           p_product_id: string
@@ -1930,6 +2949,7 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      storage_workspace_of: { Args: { object_name: string }; Returns: string }
       user_branch_ids: { Args: never; Returns: string[] }
       void_sale: {
         Args: { p_reason?: string; p_transaction_id: string }
@@ -2100,6 +3120,39 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  platform: {
+    Enums: {
+      addon_status: ["active", "cancelled"],
+      addon_type: ["branch", "seat", "storage"],
+      billing_period: ["monthly", "annual"],
+      coupon_type: ["percent", "amount"],
+      entitlement_status: ["active", "inactive", "suspended"],
+      gateway: ["midtrans", "xendit"],
+      member_role: ["owner", "admin", "member"],
+      order_item_type: ["plan", "bundle", "addon"],
+      order_status: [
+        "pending",
+        "paid",
+        "expired",
+        "failed",
+        "cancelled",
+        "refunded",
+      ],
+      payment_status: ["pending", "paid", "expired", "failed", "refunded"],
+      product_status: ["available", "coming_soon"],
+      provisioning_status: ["pending", "running", "done", "failed"],
+      staff_role: ["super_admin", "finance", "support", "marketing"],
+      subscription_status: [
+        "trialing",
+        "active",
+        "past_due",
+        "suspended",
+        "cancelled",
+        "expired",
+      ],
+      usage_metric: ["tx_count", "storage_mb"],
+    },
+  },
   public: {
     Enums: {
       approval_status: ["pending", "approved", "rejected"],

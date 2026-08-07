@@ -225,8 +225,14 @@ export async function createCategory(raw: unknown): Promise<SettingsResult> {
   const parsed = categorySchema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Input tidak valid" };
 
+  // `categories` katalog global tanpa branch_id → workspace_id wajib eksplisit.
+  const ctx = await getBranchContext();
+  if (!ctx.workspaceId) return { error: "Workspace tidak ditemukan" };
+
   const supabase = await createClient();
-  const { error } = await supabase.from("categories").insert({ name: parsed.data.name });
+  const { error } = await supabase
+    .from("categories")
+    .insert({ name: parsed.data.name, workspace_id: ctx.workspaceId });
   if (error) return { error: "Gagal menambah kategori" };
 
   revalidatePath("/settings");

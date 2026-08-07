@@ -10,8 +10,10 @@
 --   1. branches '00000000-0000-0000-0000-0000000000c1'  (Cabang Utama)
 --        -> 7 kolom punya DEFAULT ke id ini + FK; 13 RPC memakainya;
 --           lib/constants.ts MAIN_BRANCH_ID menunjuk ke sini.
---   2. auth.users + profiles dengan is_master_admin = true
---        -> kalau semua akun hilang, TIDAK ADA yang bisa login.
+--   2. TEPAT SATU auth.users + profiles dengan is_master_admin = true
+--        -> seluruh akun lain DIHAPUS (Bagian 2e).
+--        -> kalau sampai nol, TIDAK ADA yang bisa login dan pemulihannya
+--           hanya lewat SQL manual.
 --   3. Satu baris store_settings + satu baris org_settings
 --        -> dibaca .limit(1).maybeSingle() di 17 titik; kalau kosong -> null.
 --
@@ -59,6 +61,28 @@ select u.email, p.full_name, p.is_master_admin, p.is_active
 from public.profiles p
 join auth.users u on u.id = p.id
 where p.is_master_admin and p.is_active;
+
+-- ⚠️ PALING PENTING — SIAPA YANG AKAN DISIMPAN, SIAPA YANG DIHAPUS.
+-- Baca hasilnya baik-baik SEBELUM menjalankan Bagian 1-2.
+-- Bila akun yang ingin Anda simpan TIDAK bertanda 'DISIMPAN',
+-- isi v_keep_email di Bagian 2e dengan email yang benar.
+with keeper as (
+  select p.id
+  from public.profiles p
+  where p.is_master_admin and p.is_active
+  order by p.created_at
+  limit 1
+)
+select u.email,
+       p.full_name,
+       p.is_master_admin,
+       p.is_active,
+       p.created_at,
+       case when p.id = (select id from keeper)
+            then '>>> DISIMPAN <<<' else 'dihapus' end as nasib
+from public.profiles p
+join auth.users u on u.id = p.id
+order by (p.id = (select id from keeper)) desc, p.created_at;
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -155,6 +179,67 @@ where not exists (
   where branch_id = '00000000-0000-0000-0000-0000000000c1'
 );
 
+-- ── 2e. HAPUS SEMUA AKUN, SISAKAN SATU MASTER ADMIN ────────────────────────
+--
+-- ⚠️ PALING BERBAHAYA DI SELURUH BERKAS INI. Menghapus akun yang salah =
+--    terkunci dari sistem, dan hanya bisa dipulihkan lewat SQL manual.
+--
+-- Aman dijalankan di sini karena Bagian 1 sudah mengosongkan 4 tabel yang
+-- FK-nya ke profiles TANPA `ON DELETE` (transactions.cashier_id,
+-- transactions.voided_by, cash_sessions.cashier_id, cash_expenses.created_by).
+-- Kalau Bagian 1 dilewati, blok ini akan GAGAL — dan itu memang disengaja.
+--
+-- Rantai cascade: auth.users -> profiles -> branch_memberships + notifications.
+-- FK lain (audit_logs.actor_id, approvals.*, stock_*.created_by, dll.) SET NULL.
+--
+-- CARA MEMILIH AKUN YANG DISIMPAN:
+--   Isi v_keep_email di bawah dengan email yang ingin dipertahankan.
+--   Biarkan NULL -> otomatis memilih master admin AKTIF yang PALING TUA.
+
+do $$
+declare
+  v_keep_email text := null;   -- <== ISI DI SINI, mis. 'aziz@8ambusiness.com'
+  v_keep_id    uuid;
+  v_keep_shown text;
+  v_deleted    int;
+begin
+  if v_keep_email is null then
+    select p.id into v_keep_id
+    from public.profiles p
+    where p.is_master_admin and p.is_active
+    order by p.created_at
+    limit 1;
+  else
+    select p.id into v_keep_id
+    from public.profiles p
+    join auth.users u on u.id = p.id
+    where lower(u.email) = lower(v_keep_email);
+  end if;
+
+  -- Pengaman 1: harus ketemu
+  if v_keep_id is null then
+    raise exception 'DIBATALKAN: akun yang akan disimpan tidak ditemukan. '
+                    'Periksa v_keep_email, atau pastikan ada master admin aktif.';
+  end if;
+
+  -- Pengaman 2: yang disimpan HARUS master admin aktif
+  if not exists (
+    select 1 from public.profiles
+    where id = v_keep_id and is_master_admin and is_active
+  ) then
+    raise exception 'DIBATALKAN: akun terpilih bukan master admin aktif. '
+                    'Menyimpannya akan membuat Anda terkunci dari sistem.';
+  end if;
+
+  select u.email into v_keep_shown from auth.users u where u.id = v_keep_id;
+
+  delete from auth.users where id <> v_keep_id;
+  get diagnostics v_deleted = row_count;
+
+  raise notice 'DISIMPAN : % (%)', v_keep_shown, v_keep_id;
+  raise notice 'DIHAPUS  : % akun', v_deleted;
+end $$;
+
 -- ═══════════════════════════════════════════════════════════════════════════
 -- Ubah ke ROLLBACK; untuk uji kering. COMMIT; untuk menjalankan sungguhan.
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -183,10 +268,20 @@ select tgname, tgrelid::regclass as "tabel"
 from pg_trigger
 where not tgisinternal and tgname like 'trg_append_only%';
 
--- Master admin masih ada & bisa login?
-select u.email, p.full_name, p.is_master_admin
-from public.profiles p join auth.users u on u.id = p.id
-where p.is_master_admin and p.is_active;
+-- ⚠️ VERIFIKASI PALING PENTING — harus mengembalikan TEPAT SATU baris,
+-- dengan is_master_admin = true dan is_active = true.
+-- Kalau KOSONG, Anda terkunci: buat ulang lewat Dashboard > Authentication,
+-- lalu set is_master_admin = true secara manual lewat SQL.
+select u.email, p.full_name, p.is_master_admin, p.is_active, u.last_sign_in_at
+from public.profiles p join auth.users u on u.id = p.id;
+
+-- Jumlah akun tersisa — harus 1
+select count(*) as akun_tersisa from auth.users;
+
+-- Sisa keanggotaan cabang milik akun yang dihapus (harus 0 — ikut CASCADE)
+select count(*) as membership_yatim
+from public.branch_memberships m
+where not exists (select 1 from public.profiles p where p.id = m.user_id);
 
 -- Singleton settings ada tepat satu?
 select 'store_settings' as tabel, count(*) as baris from public.store_settings
@@ -196,11 +291,12 @@ union all select 'org_settings', count(*) from public.org_settings;
 -- ═══════════════════════════════════════════════════════════════════════════
 -- CATATAN — apa yang TIDAK dilakukan skrip ini, dan kenapa
 -- ═══════════════════════════════════════════════════════════════════════════
--- 1. TIDAK menghapus akun (auth.users / profiles).
---    Menghapus auth.users akan meng-cascade ke profiles dan bisa mengunci Anda
---    dari sistem. Bila ingin membersihkan akun karyawan uji, lakukan MANUAL
---    lewat Dashboard > Authentication > Users, satu per satu, dan PASTIKAN
---    minimal satu master admin tersisa.
+-- 1. MENGHAPUS akun, menyisakan tepat SATU master admin (Bagian 2e).
+--    Dilindungi dua pengaman: dibatalkan bila akun yang disimpan tidak
+--    ditemukan, dan dibatalkan bila akun terpilih bukan master admin aktif.
+--    Alternatif lebih aman bila akunnya sedikit: hapus manual lewat
+--    Dashboard > Authentication > Users. Cara itu memakai Admin API resmi
+--    dan pasti membersihkan seluruh tabel pendukung di skema auth.
 --
 -- 2. TIDAK menghapus berkas di Storage.
 --    Foto produk lama menjadi yatim setelah katalog dihapus. Bersihkan manual

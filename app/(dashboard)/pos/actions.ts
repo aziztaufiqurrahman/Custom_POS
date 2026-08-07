@@ -56,8 +56,15 @@ export async function createSale(raw: unknown): Promise<CreateSaleResult> {
 
   // Pengingat: ongkos kirim perlu dicatat sebagai pengeluaran shift.
   if (d.shipping_cost > 0) {
+    const ctx = await getBranchContext();
+    if (!ctx.workspaceId) {
+      // Penjualan sudah tersimpan; pengingat opsional. Jangan gagalkan checkout.
+      return { receipt };
+    }
     await supabase.from("notifications").insert({
       user_id: userId,
+      // Tanpa branch_id → tidak ada trigger penurun; wajib eksplisit (KEP-003).
+      workspace_id: ctx.workspaceId,
       type: "ongkir",
       title: "Ongkos kirim perlu dicatat",
       body: `Tambahkan ongkos kirim ${formatRupiah(d.shipping_cost)} ke pengeluaran shift.`,

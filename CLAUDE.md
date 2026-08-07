@@ -39,12 +39,19 @@ kode v1 masih aktif. Prinsip keras v2 yang WAJIB dipatuhi untuk kode baru:
 
 ## Status & Keputusan Proyek (konfirmasi pemilik)
 - PPN: NON-AKTIF dulu (skema & logika tetap dibuat; aktifkan via Pengaturan kapan saja).
-- ⚠️ **KOREKSI 2026-08-06:** baris ini sebelumnya menyatakan migrasi diterapkan ke "instance
-  STAGING (bukan production)". **Itu TIDAK BENAR.** Project ref `qeoeqspinyydcmoysbrb` di
-  `.mcp.json` adalah **PRODUKSI**, dan **belum ada proyek staging sama sekali**.
-  JANGAN menjalankan migrasi, `supabase db push`, atau `db reset` terhadap ref itu.
-  Sebelum migrasi apa pun: buat proyek staging + restore salinan data prod, aktifkan PITR,
-  dan kerjakan di branch `feat/multi-tenant`. Lihat `docs/keputusan-arsitektur.md`.
+- **Dua environment (per 2026-08-07):**
+  - **PROD** `qeoeqspinyydcmoysbrb` (*Taufiqurrahman POS Project*) — berisi data pelanggan nyata.
+  - **STAGING** `wmwpjtujtburrybtdivh` (*Taufiqurrahman POS STAGING*) — free tier, kredensial
+    di `.env.local`. `supabase link` menunjuk ke sini.
+  **Aturan: setiap migrasi WAJIB lolos di STAGING sebelum menyentuh PROD.** Aturan ini terbukti
+  berharga — replay di staging menangkap 5 bug SQL yang pasti menggagalkan PROD di tengah jalan.
+- **Riwayat migrasi kini ADA di kedua DB** (`supabase_migrations.schema_migrations`, `0001`–`0034`).
+  Sebelumnya migrasi dijalankan manual lewat SQL Editor tanpa catatan — jangan ulangi itu.
+  Pakai `supabase db push` (staging) dan verifikasi tiap titik henti.
+- **PITR tetap MATI** dan tidak ada backup otomatis (org masih plan `free`). PITR = $100/bln di
+  atas Pro $25/bln, ditolak pemilik 2026-08-07 karena datanya baru 275 baris. Sebagai gantinya:
+  **ambil dump logikal ke `backups/<tanggal>/` sebelum migrasi apa pun.** Folder itu di-gitignore.
+  Begitu pelanggan berbayar pertama masuk, tinjau ulang keputusan ini.
 - Struk: dukung DUA mode — cetak via browser + export PDF, DAN layout thermal printer 58/80mm.
 - Single store (satu toko); multi-cabang = fase lanjutan.
 - Split payment & varian produk = fase lanjutan (bukan MVP).

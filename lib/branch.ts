@@ -8,14 +8,24 @@ import { createClient } from "@/lib/supabase/server";
 import type { BranchRole } from "@/lib/constants";
 
 export const ACTIVE_BRANCH_COOKIE = "pos_active_branch";
-/** Cabang Utama (Pusat) — id tetap. */
-export const MAIN_BRANCH_ID = "00000000-0000-0000-0000-0000000000c1";
+
+// MAIN_BRANCH_ID sengaja DIHAPUS (KEP-009). Di multi-tenant setiap workspace
+// punya Cabang Pusat sendiri, ditandai kolom `branches.is_main`. Pakai
+// `ctx.mainBranchId` dari getBranchContext(), jangan pernah menanam UUID.
 
 export type BranchLite = {
   id: string;
   code: string;
   name: string;
   is_active: boolean;
+  is_main: boolean;
+  /**
+   * Nullable karena di database yang belum bertenant (STAGING/CI, atau sesaat
+   * sebelum provisioning workspace pertama) cabang seed '…c1' masih menggantung
+   * — lihat 0028 Bagian 2a. Di PROD kolom ini NOT NULL. `workspaceId` di
+   * BranchContext sudah memperlakukan null sebagai "belum ada workspace".
+   */
+  workspace_id: string | null;
 };
 
 export type MembershipLite = {
@@ -30,6 +40,10 @@ export type BranchContext = {
   branches: BranchLite[]; // cabang yang boleh diakses user
   activeBranchId: string | null;
   activeBranch: BranchLite | null;
+  /** Workspace aktif (tenant induk). Null bila user belum punya cabang. */
+  workspaceId: string | null;
+  /** Cabang Pusat workspace ini — pengganti MAIN_BRANCH_ID (KEP-009). */
+  mainBranchId: string | null;
 };
 
 /**
@@ -45,6 +59,8 @@ export const getBranchContext = cache(async (): Promise<BranchContext> => {
     branches: [],
     activeBranchId: null,
     activeBranch: null,
+    workspaceId: null,
+    mainBranchId: null,
   };
   if (!userId || !profile) return empty;
 
@@ -66,7 +82,7 @@ export const getBranchContext = cache(async (): Promise<BranchContext> => {
   if (isMasterAdmin) {
     const { data } = await supabase
       .from("branches")
-      .select("id, code, name, is_active")
+      .select("id, code, name, is_active, is_main, workspace_id")
       .eq("is_active", true)
       .order("name");
     branches = data ?? [];
@@ -74,7 +90,7 @@ export const getBranchContext = cache(async (): Promise<BranchContext> => {
     const ids = memberships.map((m) => m.branch_id);
     const { data } = await supabase
       .from("branches")
-      .select("id, code, name, is_active")
+      .select("id, code, name, is_active, is_main, workspace_id")
       .in("id", ids)
       .eq("is_active", true)
       .order("name");
@@ -91,5 +107,20 @@ export const getBranchContext = cache(async (): Promise<BranchContext> => {
       : branches[0]?.id) ?? null;
   const activeBranch = branches.find((b) => b.id === activeBranchId) ?? null;
 
-  return { isMasterAdmin, memberships, branches, activeBranchId, activeBranch };
+  // Workspace & Cabang Pusat diturunkan dari cabang yang boleh diakses user —
+  // bukan dari UUID hardcode (KEP-009). RLS sudah memastikan `branches` hanya
+  // berisi cabang milik workspace user, jadi aman diambil dari sini.
+  const workspaceId = activeBranch?.workspace_id ?? branches[0]?.workspace_id ?? null;
+  const mainBranchId =
+    branches.find((b) => b.is_main && b.workspace_id === workspaceId)?.id ?? null;
+
+  return {
+    isMasterAdmin,
+    memberships,
+    branches,
+    activeBranchId,
+    activeBranch,
+    workspaceId,
+    mainBranchId,
+  };
 });

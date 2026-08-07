@@ -538,7 +538,7 @@ new.raw_user_meta_data->>'signup_source' = 'storefront' (KEP-002). Kode signup s
 WAJIB mengirim penanda itu; alur undangan karyawan POS jangan disentuh.
 Trigger lain: updated_at, append-only platform.audit_logs.
 Implementasikan auth: signup/login/verify/reset (Supabase Auth) + middleware proteksi
-route + pemilih workspace. Seed: 1 produk "Kasir Unggul" (available) + 9 baris plan =
+route + pemilih workspace. Seed: 1 produk "Kasir Unggul" (available) + 8 baris plan =
 5 tier (Gratis/Basic/Pro/Bisnis/Enterprise) x periode, angka & limits PERSIS dari
 Handoff §8.2 + §8.4 (Gratis & Enterprise hanya 1 baris, sisanya bulanan + tahunan)
 + beberapa produk "coming_soon".
@@ -675,7 +675,7 @@ Commit per fitur.
 |---|---|---|
 | 1 | **Gateway** | ✅ **Midtrans Snap** — hosted checkout drop-in yang persis cocok §5.4; GoPay native; paling cepat sampai transaksi pertama. Onboarding merchant butuh dokumen usaha → **urus PARALEL dengan Fase 1B** agar tidak menghambat Fase 3 |
 | 2 | **Metode aktif MVP** | ✅ VA + e-wallet + QRIS (kartu & recurring menyusul) |
-| 3 | **Model harga** | ✅ Final di Handoff §8.2 — 5 tier, 9 baris `plans` |
+| 3 | **Model harga** | ✅ Final di Handoff §8.2 — 5 tier, **8 baris** `plans` (Gratis 1 + Basic 2 + Pro 2 + Bisnis 2 + Enterprise 1) |
 | 4 | **Trial** | ✅ **TIDAK ADA trial terpisah.** Tier **Gratis** sudah berfungsi sebagai trial permanen. Menghapus `trialing`, kartu di muka, pengingat akhir trial, dan dunning-trial dari cakupan MVP. Sesuai funnel §8.1 |
 | 5 | **Kanal notifikasi** | ✅ **Email dulu** (Resend). WhatsApp memakai mekanisme **tautan wa.me yang SUDAH ADA** (`lib/alerts.ts` + `org_settings.alert_whatsapp`) — gratis, tanpa verifikasi Meta. WA Business API ditunda ke Fase 7 |
 | 6 | **Limit paket** | ✅ Final di Handoff §8.4 |

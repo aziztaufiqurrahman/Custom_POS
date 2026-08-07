@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { saveQrisImage } from "@/app/(dashboard)/pos/actions";
 import { createClient } from "@/lib/supabase/client";
 import { compressImage } from "@/lib/image";
+import { getWorkspaceId } from "@/lib/workspace-client";
 import { Button } from "@/components/ui/button";
 
 const BUCKET = "qris";
@@ -32,7 +33,12 @@ export function QrisUploader({
     try {
       // Kompres ringan agar QRIS tetap tajam & mudah dipindai.
       const blob = await compressImage(file, 1500, 0.92);
-      const path = `store/qris-${crypto.randomUUID()}.jpg`;
+      const ws = await getWorkspaceId(supabase);
+      if (!ws) {
+        toast.error("Workspace tidak ditemukan");
+        return null;
+      }
+      const path = `${ws}/store/qris-${crypto.randomUUID()}.jpg`;
       const { error } = await supabase.storage
         .from(BUCKET)
         .upload(path, blob, { contentType: "image/jpeg", upsert: false });

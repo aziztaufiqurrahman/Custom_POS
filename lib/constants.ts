@@ -111,8 +111,9 @@ export const DEFAULT_MANAGER_PERMISSIONS: BranchPermission[] = [
 ];
 export const DEFAULT_CASHIER_PERMISSIONS: BranchPermission[] = ["cash.drop"];
 
-/** UUID Cabang Utama (di-seed pada migrasi 0015). */
-export const MAIN_BRANCH_ID = "00000000-0000-0000-0000-0000000000c1";
+// MAIN_BRANCH_ID DIHAPUS (KEP-009): tiap workspace punya Cabang Pusat sendiri,
+// ditandai kolom `branches.is_main`. Pakai `ctx.mainBranchId` dari
+// getBranchContext() — jangan pernah menanam UUID cabang di kode.
 
 export const STOCK_MOVEMENT_TYPES = [
   "initial",

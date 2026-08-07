@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getBranchContext, MAIN_BRANCH_ID } from "@/lib/branch";
+import { getBranchContext } from "@/lib/branch";
 import { createClient } from "@/lib/supabase/server";
 
 import { InventoryClient } from "./inventory-client";
@@ -37,7 +37,7 @@ export default async function InventoryPage() {
   const ctx = await getBranchContext();
   // Inventory DIKUNCI ke Cabang Utama (Pusat) untuk master admin; manajer memakai
   // cabangnya. Fitur lain (Gudang, POS, dst.) tetap mengikuti switcher cabang.
-  const activeId = ctx.isMasterAdmin ? MAIN_BRANCH_ID : ctx.activeBranchId;
+  const activeId = ctx.isMasterAdmin ? ctx.mainBranchId : ctx.activeBranchId;
   const invBranch = ctx.branches.find((b) => b.id === activeId) ?? ctx.activeBranch;
   const supabase = await createClient();
 

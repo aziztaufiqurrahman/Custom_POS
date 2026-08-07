@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { setStoreImage } from "@/app/(dashboard)/settings/actions";
 import { createClient } from "@/lib/supabase/client";
 import { compressImage } from "@/lib/image";
+import { getWorkspaceId } from "@/lib/workspace-client";
 import { Button } from "@/components/ui/button";
 
 export function StoreImageUploader({
@@ -35,7 +36,12 @@ export function StoreImageUploader({
     setBusy(true);
     try {
       const blob = await compressImage(file, maxSize, quality);
-      const path = `store/${kind}-${crypto.randomUUID()}.jpg`;
+      const ws = await getWorkspaceId(supabase);
+      if (!ws) {
+        toast.error("Workspace tidak ditemukan");
+        return null;
+      }
+      const path = `${ws}/store/${kind}-${crypto.randomUUID()}.jpg`;
       const { error } = await supabase.storage
         .from(bucket)
         .upload(path, blob, { contentType: "image/jpeg", upsert: false });
