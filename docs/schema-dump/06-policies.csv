@@ -1,0 +1,88 @@
+schemaname,tablename,policyname,permissive,roles,cmd,using_expr,with_check_expr
+public,approvals,approvals_select,PERMISSIVE,{authenticated},SELECT,(is_master_admin() OR (branch_id IN ( SELECT user_branch_ids() AS user_branch_ids))),null
+public,approvals,approvals_write,PERMISSIVE,{authenticated},ALL,(is_master_admin() OR (branch_id IN ( SELECT user_branch_ids() AS user_branch_ids))),(is_master_admin() OR (branch_id IN ( SELECT user_branch_ids() AS user_branch_ids)))
+public,audit_logs,audit_insert,PERMISSIVE,{authenticated},INSERT,null,((actor_id = auth.uid()) OR is_admin())
+public,audit_logs,audit_select,PERMISSIVE,{authenticated},SELECT,is_admin(),null
+public,bank_accounts,banks_select,PERMISSIVE,{authenticated},SELECT,(is_master_admin() OR (branch_id IN ( SELECT user_branch_ids() AS user_branch_ids))),null
+public,bank_accounts,banks_write,PERMISSIVE,{authenticated},ALL,"(is_master_admin() OR has_branch_permission(branch_id, 'settings.branch_edit'::text))","(is_master_admin() OR has_branch_permission(branch_id, 'settings.branch_edit'::text))"
+public,branch_memberships,memberships_select,PERMISSIVE,{authenticated},SELECT,(is_master_admin() OR (user_id = auth.uid())),null
+public,branch_memberships,memberships_write,PERMISSIVE,{authenticated},ALL,is_master_admin(),is_master_admin()
+public,branch_products,branch_products_select,PERMISSIVE,{authenticated},SELECT,(is_master_admin() OR (branch_id IN ( SELECT user_branch_ids() AS user_branch_ids))),null
+public,branch_products,branch_products_write,PERMISSIVE,{authenticated},ALL,"(is_master_admin() OR has_branch_permission(branch_id, 'product.branch_edit'::text))","(is_master_admin() OR has_branch_permission(branch_id, 'product.branch_edit'::text))"
+public,branch_settings,branch_settings_select,PERMISSIVE,{authenticated},SELECT,(is_master_admin() OR (branch_id IN ( SELECT user_branch_ids() AS user_branch_ids))),null
+public,branch_settings,branch_settings_write,PERMISSIVE,{authenticated},ALL,"(is_master_admin() OR has_branch_permission(branch_id, 'settings.branch_edit'::text))","(is_master_admin() OR has_branch_permission(branch_id, 'settings.branch_edit'::text))"
+public,branches,branches_select,PERMISSIVE,{authenticated},SELECT,(is_master_admin() OR (id IN ( SELECT user_branch_ids() AS user_branch_ids))),null
+public,branches,branches_write,PERMISSIVE,{authenticated},ALL,is_master_admin(),is_master_admin()
+public,cash_expenses,cash_expenses_delete,PERMISSIVE,{public},DELETE,"(is_admin() OR (EXISTS ( SELECT 1
+   FROM cash_sessions s
+  WHERE ((s.id = cash_expenses.cash_session_id) AND (s.cashier_id = auth.uid()) AND (s.status = 'open'::session_status)))))",null
+public,cash_expenses,cash_expenses_insert,PERMISSIVE,{public},INSERT,null,"((created_by = auth.uid()) AND (EXISTS ( SELECT 1
+   FROM cash_sessions s
+  WHERE ((s.id = cash_expenses.cash_session_id) AND (s.status = 'open'::session_status) AND ((s.cashier_id = auth.uid()) OR is_admin())))))"
+public,cash_expenses,cash_expenses_select,PERMISSIVE,{authenticated},SELECT,"(EXISTS ( SELECT 1
+   FROM cash_sessions s
+  WHERE ((s.id = cash_expenses.cash_session_id) AND (has_branch_role(s.branch_id, 'manager'::branch_role) OR (s.cashier_id = auth.uid())))))",null
+public,cash_movements,cash_movements_select,PERMISSIVE,{authenticated},SELECT,(is_master_admin() OR (branch_id IN ( SELECT user_branch_ids() AS user_branch_ids))),null
+public,cash_movements,cash_movements_write,PERMISSIVE,{authenticated},ALL,(is_master_admin() OR (branch_id IN ( SELECT user_branch_ids() AS user_branch_ids))),(is_master_admin() OR (branch_id IN ( SELECT user_branch_ids() AS user_branch_ids)))
+public,cash_sessions,sessions_insert,PERMISSIVE,{authenticated},INSERT,null,((cashier_id = auth.uid()) AND (is_master_admin() OR (branch_id IN ( SELECT user_branch_ids() AS user_branch_ids))))
+public,cash_sessions,sessions_select,PERMISSIVE,{authenticated},SELECT,"(has_branch_role(branch_id, 'manager'::branch_role) OR (cashier_id = auth.uid()))",null
+public,cash_sessions,sessions_update,PERMISSIVE,{authenticated},UPDATE,"(has_branch_role(branch_id, 'manager'::branch_role) OR (cashier_id = auth.uid()))","(has_branch_role(branch_id, 'manager'::branch_role) OR (cashier_id = auth.uid()))"
+public,categories,categories_select,PERMISSIVE,{authenticated},SELECT,true,null
+public,categories,categories_write,PERMISSIVE,{authenticated},ALL,is_admin(),is_admin()
+public,daily_closures,closures_select,PERMISSIVE,{authenticated},SELECT,(is_master_admin() OR (branch_id IN ( SELECT user_branch_ids() AS user_branch_ids))),null
+public,daily_closures,closures_write,PERMISSIVE,{authenticated},ALL,(is_master_admin() OR (branch_id IN ( SELECT user_branch_ids() AS user_branch_ids))),(is_master_admin() OR (branch_id IN ( SELECT user_branch_ids() AS user_branch_ids)))
+public,goods_receipt_items,receipt_items_all,PERMISSIVE,{authenticated},ALL,"(EXISTS ( SELECT 1
+   FROM goods_receipts g
+  WHERE ((g.id = goods_receipt_items.receipt_id) AND (is_master_admin() OR (g.branch_id IN ( SELECT user_branch_ids() AS user_branch_ids))))))","(EXISTS ( SELECT 1
+   FROM goods_receipts g
+  WHERE ((g.id = goods_receipt_items.receipt_id) AND (is_master_admin() OR (g.branch_id IN ( SELECT user_branch_ids() AS user_branch_ids))))))"
+public,goods_receipts,receipts_select,PERMISSIVE,{authenticated},SELECT,(is_master_admin() OR (branch_id IN ( SELECT user_branch_ids() AS user_branch_ids))),null
+public,goods_receipts,receipts_write,PERMISSIVE,{authenticated},ALL,(is_master_admin() OR (branch_id IN ( SELECT user_branch_ids() AS user_branch_ids))),(is_master_admin() OR (branch_id IN ( SELECT user_branch_ids() AS user_branch_ids)))
+public,notifications,notifications_insert,PERMISSIVE,{public},INSERT,null,(user_id = auth.uid())
+public,notifications,notifications_select,PERMISSIVE,{public},SELECT,(user_id = auth.uid()),null
+public,notifications,notifications_update,PERMISSIVE,{public},UPDATE,(user_id = auth.uid()),(user_id = auth.uid())
+public,org_settings,org_settings_select,PERMISSIVE,{authenticated},SELECT,true,null
+public,org_settings,org_settings_write,PERMISSIVE,{authenticated},ALL,is_master_admin(),is_master_admin()
+public,payments,payments_select,PERMISSIVE,{authenticated},SELECT,"(EXISTS ( SELECT 1
+   FROM transactions t
+  WHERE ((t.id = payments.transaction_id) AND (has_branch_role(t.branch_id, 'manager'::branch_role) OR (t.cashier_id = auth.uid())))))",null
+public,products,products_delete,PERMISSIVE,{authenticated},DELETE,(is_admin() OR has_permission('product.delete'::text)),null
+public,products,products_insert,PERMISSIVE,{authenticated},INSERT,null,(is_admin() OR has_permission('product.create'::text))
+public,products,products_select_admin,PERMISSIVE,{authenticated},SELECT,is_admin(),null
+public,products,products_update,PERMISSIVE,{authenticated},UPDATE,(is_admin() OR has_permission('product.edit'::text)),(is_admin() OR has_permission('product.edit'::text))
+public,profiles,profiles_insert,PERMISSIVE,{authenticated},INSERT,null,is_admin()
+public,profiles,profiles_select,PERMISSIVE,{authenticated},SELECT,((id = auth.uid()) OR is_admin()),null
+public,profiles,profiles_update,PERMISSIVE,{authenticated},UPDATE,((id = auth.uid()) OR is_admin()),((id = auth.uid()) OR is_admin())
+public,stock_movements,movements_select,PERMISSIVE,{authenticated},SELECT,true,null
+public,stock_movements,movements_write,PERMISSIVE,{authenticated},ALL,is_admin(),is_admin()
+public,stock_opname_items,opname_items_select,PERMISSIVE,{authenticated},SELECT,"(EXISTS ( SELECT 1
+   FROM stock_opnames o
+  WHERE ((o.id = stock_opname_items.opname_id) AND (is_admin() OR (o.created_by = auth.uid())))))",null
+public,stock_opname_items,opname_items_write,PERMISSIVE,{authenticated},ALL,(is_admin() OR has_permission('stock.opname'::text)),(is_admin() OR has_permission('stock.opname'::text))
+public,stock_opnames,opnames_select,PERMISSIVE,{authenticated},SELECT,(is_admin() OR (created_by = auth.uid())),null
+public,stock_opnames,opnames_write,PERMISSIVE,{authenticated},ALL,(is_admin() OR has_permission('stock.opname'::text)),(is_admin() OR has_permission('stock.opname'::text))
+public,stock_transfer_items,transfer_items_all,PERMISSIVE,{authenticated},ALL,"(EXISTS ( SELECT 1
+   FROM stock_transfers t
+  WHERE ((t.id = stock_transfer_items.transfer_id) AND (is_master_admin() OR (t.from_branch_id IN ( SELECT user_branch_ids() AS user_branch_ids)) OR (t.to_branch_id IN ( SELECT user_branch_ids() AS user_branch_ids))))))","(EXISTS ( SELECT 1
+   FROM stock_transfers t
+  WHERE ((t.id = stock_transfer_items.transfer_id) AND (is_master_admin() OR (t.from_branch_id IN ( SELECT user_branch_ids() AS user_branch_ids)) OR (t.to_branch_id IN ( SELECT user_branch_ids() AS user_branch_ids))))))"
+public,stock_transfers,transfers_select,PERMISSIVE,{authenticated},SELECT,(is_master_admin() OR (from_branch_id IN ( SELECT user_branch_ids() AS user_branch_ids)) OR (to_branch_id IN ( SELECT user_branch_ids() AS user_branch_ids))),null
+public,stock_transfers,transfers_write,PERMISSIVE,{authenticated},ALL,(is_master_admin() OR (from_branch_id IN ( SELECT user_branch_ids() AS user_branch_ids)) OR (to_branch_id IN ( SELECT user_branch_ids() AS user_branch_ids))),(is_master_admin() OR (from_branch_id IN ( SELECT user_branch_ids() AS user_branch_ids)) OR (to_branch_id IN ( SELECT user_branch_ids() AS user_branch_ids)))
+public,store_settings,settings_select,PERMISSIVE,{authenticated},SELECT,true,null
+public,store_settings,settings_write,PERMISSIVE,{authenticated},ALL,is_admin(),is_admin()
+public,suppliers,suppliers_select,PERMISSIVE,{authenticated},SELECT,true,null
+public,suppliers,suppliers_write,PERMISSIVE,{authenticated},ALL,is_master_admin(),is_master_admin()
+public,transaction_items,trx_items_select,PERMISSIVE,{authenticated},SELECT,"(EXISTS ( SELECT 1
+   FROM transactions t
+  WHERE ((t.id = transaction_items.transaction_id) AND (is_admin() OR (t.cashier_id = auth.uid())))))",null
+public,transactions,transactions_select,PERMISSIVE,{authenticated},SELECT,"(has_branch_role(branch_id, 'manager'::branch_role) OR (cashier_id = auth.uid()))",null
+public,wastage_items,wastage_items_all,PERMISSIVE,{authenticated},ALL,"(EXISTS ( SELECT 1
+   FROM wastages w
+  WHERE ((w.id = wastage_items.wastage_id) AND (is_master_admin() OR (w.branch_id IN ( SELECT user_branch_ids() AS user_branch_ids))))))","(EXISTS ( SELECT 1
+   FROM wastages w
+  WHERE ((w.id = wastage_items.wastage_id) AND (is_master_admin() OR (w.branch_id IN ( SELECT user_branch_ids() AS user_branch_ids))))))"
+public,wastages,wastages_select,PERMISSIVE,{authenticated},SELECT,(is_master_admin() OR (branch_id IN ( SELECT user_branch_ids() AS user_branch_ids))),null
+public,wastages,wastages_write,PERMISSIVE,{authenticated},ALL,(is_master_admin() OR (branch_id IN ( SELECT user_branch_ids() AS user_branch_ids))),(is_master_admin() OR (branch_id IN ( SELECT user_branch_ids() AS user_branch_ids)))
+storage,objects,storage_admin_write,PERMISSIVE,{authenticated},ALL,"((bucket_id = ANY (ARRAY['qris'::text, 'store-logos'::text])) AND is_admin())","((bucket_id = ANY (ARRAY['qris'::text, 'store-logos'::text])) AND is_admin())"
+storage,objects,storage_product_images_write,PERMISSIVE,{authenticated},ALL,((bucket_id = 'product-images'::text) AND (is_admin() OR has_permission('product.upload_image'::text))),((bucket_id = 'product-images'::text) AND (is_admin() OR has_permission('product.upload_image'::text)))
+storage,objects,storage_public_read,PERMISSIVE,{public},SELECT,"(bucket_id = ANY (ARRAY['product-images'::text, 'qris'::text, 'store-logos'::text]))",null

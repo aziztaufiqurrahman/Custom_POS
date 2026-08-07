@@ -1,0 +1,1374 @@
+nama,argumen,bahasa,security_definer,volatilitas,definisi_lengkap
+adjust_stock,"p_product_id uuid, p_new_qty numeric, p_note text, p_branch_id uuid",plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.adjust_stock(p_product_id uuid, p_new_qty numeric, p_note text DEFAULT NULL::text, p_branch_id uuid DEFAULT '00000000-0000-0000-0000-0000000000c1'::uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_uid uuid := auth.uid();
+  v_main uuid := '00000000-0000-0000-0000-0000000000c1';
+  v_branch uuid := coalesce(p_branch_id, v_main);
+  v_old numeric(14,3); v_delta numeric(14,3);
+begin
+  if v_uid is null then raise exception 'Tidak terautentikasi'; end if;
+  if not (public.is_admin() or public.has_branch_permission(v_branch, 'stock.adjust')) then
+    raise exception 'Tidak berwenang menyesuaikan stok';
+  end if;
+  if p_new_qty is null or p_new_qty < 0 then raise exception 'Nilai stok tidak valid'; end if;
+
+  select stock into v_old from public.branch_products
+    where branch_id = v_branch and product_id = p_product_id for update;
+  if not found then raise exception 'Produk tidak tersedia di cabang'; end if;
+
+  v_delta := p_new_qty - v_old;
+  update public.branch_products set stock = p_new_qty
+    where branch_id = v_branch and product_id = p_product_id;
+  if v_branch = v_main then
+    update public.products set stock = p_new_qty where id = p_product_id;
+  end if;
+
+  insert into public.stock_movements (branch_id, product_id, type, qty_change, stock_after, note, created_by)
+    values (v_branch, p_product_id, 'adjustment', v_delta, p_new_qty, coalesce(p_note, 'Koreksi stok'), v_uid);
+  insert into public.audit_logs (branch_id, actor_id, action, entity, entity_id, metadata)
+    values (v_branch, v_uid, 'stock.adjust', 'product', p_product_id, jsonb_build_object('from', v_old, 'to', p_new_qty));
+
+  return jsonb_build_object('stock_after', p_new_qty, 'delta', v_delta);
+end; $function$
+"
+apply_price_override,p_approval_id uuid,plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.apply_price_override(p_approval_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_uid uuid := auth.uid();
+  v_appr public.approvals%rowtype;
+  v_pid uuid;
+  v_new_price numeric(14,2);
+begin
+  if v_uid is null then raise exception 'Tidak terautentikasi'; end if;
+
+  select * into v_appr from public.approvals where id = p_approval_id for update;
+  if not found then raise exception 'Permintaan tidak ditemukan'; end if;
+  if v_appr.request_type <> 'price_override' then raise exception 'Jenis permintaan bukan perubahan harga'; end if;
+
+  -- Otoritas: master admin atau manajer/approval.grant di cabang tsb.
+  if not public.has_branch_role(v_appr.branch_id, 'manager')
+     and not public.has_branch_permission(v_appr.branch_id, 'approval.grant') then
+    raise exception 'Tidak berwenang menyetujui perubahan harga';
+  end if;
+
+  v_pid := (v_appr.payload->>'product_id')::uuid;
+  v_new_price := (v_appr.payload->>'new_price')::numeric;
+  if v_pid is null or v_new_price is null or v_new_price < 0 then
+    raise exception 'Data usulan harga tidak valid';
+  end if;
+
+  update public.branch_products set price = v_new_price
+    where branch_id = v_appr.branch_id and product_id = v_pid;
+  if not found then raise exception 'Produk tidak tersedia di cabang'; end if;
+
+  insert into public.audit_logs (branch_id, actor_id, action, entity, entity_id, metadata)
+    values (v_appr.branch_id, v_uid, 'branch_product.price_override', 'product', v_pid,
+            jsonb_build_object('new_price', v_new_price, 'approval_id', p_approval_id));
+
+  return jsonb_build_object('ok', true, 'price', v_new_price);
+end;
+$function$
+"
+approve_wastage,p_wastage_id uuid,plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.approve_wastage(p_wastage_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_uid uuid := auth.uid();
+  v_main uuid := '00000000-0000-0000-0000-0000000000c1';
+  v_w public.wastages%rowtype;
+  v_it record; v_after numeric(14,3);
+begin
+  if v_uid is null then raise exception 'Tidak terautentikasi'; end if;
+  select * into v_w from public.wastages where id = p_wastage_id for update;
+  if not found then raise exception 'Data barang rusak tidak ditemukan'; end if;
+  if v_w.status <> 'pending_approval' then raise exception 'Barang rusak sudah diputuskan'; end if;
+  if not (public.is_master_admin() or public.has_branch_role(v_w.branch_id, 'manager')
+          or public.has_branch_permission(v_w.branch_id, 'approval.grant')) then
+    raise exception 'Tidak berwenang menyetujui barang rusak';
+  end if;
+
+  for v_it in select product_id, qty from public.wastage_items where wastage_id = p_wastage_id
+  loop
+    update public.branch_products set stock = stock - v_it.qty
+      where branch_id = v_w.branch_id and product_id = v_it.product_id returning stock into v_after;
+    if not found then raise exception 'Produk tidak tersedia di cabang'; end if;
+    if v_after < 0 then raise exception 'Stok tidak cukup untuk dibuang'; end if;
+    if v_w.branch_id = v_main then update public.products set stock = v_after where id = v_it.product_id; end if;
+    insert into public.stock_movements (branch_id, product_id, type, qty_change, stock_after, reference_id, note, created_by)
+      values (v_w.branch_id, v_it.product_id, 'wastage', -v_it.qty, v_after, p_wastage_id,
+              coalesce(v_w.reason, 'Barang rusak ' || v_w.code), v_uid);
+  end loop;
+
+  update public.wastages set status = 'approved', approved_by = v_uid where id = p_wastage_id;
+  insert into public.audit_logs (branch_id, actor_id, action, entity, entity_id, metadata)
+    values (v_w.branch_id, v_uid, 'stock.wastage', 'wastage', p_wastage_id, jsonb_build_object('code', v_w.code));
+  return jsonb_build_object('ok', true);
+end $function$
+"
+assign_seq_no,,plpgsql,false,v,"CREATE OR REPLACE FUNCTION public.assign_seq_no()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SET search_path TO 'public'
+AS $function$
+begin
+  if new.seq_no is null then
+    -- Serialize per cabang agar nomor urut tanpa celah & bebas race.
+    perform pg_advisory_xact_lock(hashtext('seq_no_' || new.branch_id::text));
+    select coalesce(max(seq_no), 0) + 1 into new.seq_no
+      from public.transactions where branch_id = new.branch_id;
+  end if;
+  return new;
+end $function$
+"
+branch_seq_gaps,,plpgsql,true,s,"CREATE OR REPLACE FUNCTION public.branch_seq_gaps()
+ RETURNS TABLE(branch_id uuid, branch_name text, max_seq bigint, trx_count bigint, missing bigint)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  if not public.is_master_admin() then
+    raise exception 'Hanya Master Admin';
+  end if;
+  return query
+    select t.branch_id, b.name, max(t.seq_no), count(*)::bigint,
+           (max(t.seq_no) - count(*))::bigint
+    from public.transactions t
+    join public.branches b on b.id = t.branch_id
+    group by t.branch_id, b.name
+    having max(t.seq_no) <> count(*);
+end $function$
+"
+close_daily,"p_branch_id uuid, p_business_date date",plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.close_daily(p_branch_id uuid, p_business_date date)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_uid uuid := auth.uid();
+  v_totals jsonb;
+begin
+  if v_uid is null then raise exception 'Tidak terautentikasi'; end if;
+  if not (public.is_master_admin() or public.has_branch_permission(p_branch_id, 'report.view')) then
+    raise exception 'Tidak berwenang menutup laporan harian cabang ini';
+  end if;
+
+  select jsonb_build_object(
+    'trx_count', (
+      select count(*) from public.transactions t
+      where t.branch_id = p_branch_id and t.status = 'completed'
+        and (t.created_at at time zone 'Asia/Jakarta')::date = p_business_date),
+    'gross_total', (
+      select coalesce(sum(t.grand_total), 0) from public.transactions t
+      where t.branch_id = p_branch_id and t.status = 'completed'
+        and (t.created_at at time zone 'Asia/Jakarta')::date = p_business_date),
+    'by_method', coalesce((
+      select jsonb_object_agg(s.method, s.amt) from (
+        select p.method::text as method, sum(p.amount) as amt
+        from public.payments p
+        join public.transactions t on t.id = p.transaction_id
+        where t.branch_id = p_branch_id and t.status = 'completed'
+          and (t.created_at at time zone 'Asia/Jakarta')::date = p_business_date
+        group by p.method
+      ) s), '{}'::jsonb)
+  ) into v_totals;
+
+  insert into public.daily_closures (branch_id, business_date, totals, closed_by, is_locked)
+    values (p_branch_id, p_business_date, v_totals, v_uid, true)
+  on conflict (branch_id, business_date) do update
+    set totals = excluded.totals, closed_by = v_uid, closed_at = now(), is_locked = true;
+
+  insert into public.audit_logs (branch_id, actor_id, action, entity, metadata)
+    values (p_branch_id, v_uid, 'daily.close', 'daily_closure',
+            jsonb_build_object('date', p_business_date, 'totals', v_totals));
+
+  return v_totals;
+end $function$
+"
+complete_opname,"p_opname_id uuid, p_items jsonb",plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.complete_opname(p_opname_id uuid, p_items jsonb)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_uid uuid := auth.uid();
+  v_main uuid := '00000000-0000-0000-0000-0000000000c1';
+  v_op public.stock_opnames%rowtype;
+  v_branch uuid;
+  v_item jsonb; v_prod public.products%rowtype;
+  v_sys numeric(14,3); v_phys numeric(14,3); v_diff numeric(14,3);
+  v_reason text; v_changed int := 0;
+begin
+  if v_uid is null then raise exception 'Tidak terautentikasi'; end if;
+  if not (public.is_admin() or public.has_permission('stock.opname')) then
+    raise exception 'Tidak berwenang melakukan stock opname';
+  end if;
+
+  select * into v_op from public.stock_opnames where id = p_opname_id for update;
+  if not found then raise exception 'Sesi opname tidak ditemukan'; end if;
+  if v_op.status <> 'draft' then raise exception 'Sesi opname sudah selesai'; end if;
+  if not (public.is_admin() or v_op.created_by = v_uid) then
+    raise exception 'Sesi opname bukan milik Anda';
+  end if;
+  v_branch := coalesce(v_op.branch_id, v_main);
+
+  delete from public.stock_opname_items where opname_id = p_opname_id;
+
+  for v_item in select * from jsonb_array_elements(p_items)
+  loop
+    select * into v_prod from public.products
+      where id = (v_item->>'product_id')::uuid and deleted_at is null;
+    if not found then continue; end if;
+
+    select stock into v_sys from public.branch_products
+      where branch_id = v_branch and product_id = v_prod.id for update;
+    if not found then continue; end if;
+
+    v_phys := (v_item->>'physical_qty')::numeric;
+    if v_phys is null or v_phys < 0 then raise exception 'Qty fisik tidak valid untuk %', v_prod.name; end if;
+    v_diff := v_phys - v_sys;
+    v_reason := nullif(btrim(coalesce(v_item->>'reason', '')), '');
+    if v_diff <> 0 and v_reason is null then
+      raise exception 'Alasan wajib untuk selisih pada %', v_prod.name;
+    end if;
+
+    insert into public.stock_opname_items (opname_id, product_id, system_qty, physical_qty, difference, reason)
+      values (p_opname_id, v_prod.id, v_sys, v_phys, v_diff, v_reason);
+
+    if v_diff <> 0 then
+      update public.branch_products set stock = v_phys
+        where branch_id = v_branch and product_id = v_prod.id;
+      if v_branch = v_main then
+        update public.products set stock = v_phys where id = v_prod.id;
+      end if;
+      insert into public.stock_movements (branch_id, product_id, type, qty_change, stock_after, reference_id, note, created_by)
+        values (v_branch, v_prod.id, 'opname', v_diff, v_phys, p_opname_id, coalesce(v_reason, 'Stock opname'), v_uid);
+      v_changed := v_changed + 1;
+    end if;
+  end loop;
+
+  update public.stock_opnames set status = 'completed', completed_at = now() where id = p_opname_id;
+  insert into public.audit_logs (branch_id, actor_id, action, entity, entity_id, metadata)
+    values (v_branch, v_uid, 'stock.opname_complete', 'stock_opname', p_opname_id, jsonb_build_object('changed', v_changed));
+
+  return jsonb_build_object('changed', v_changed);
+end; $function$
+"
+create_sale,"p_cash_session_id uuid, p_items jsonb, p_payment jsonb, p_order_discount numeric, p_customer_name text, p_customer_phone text, p_note text, p_shipping_cost numeric",plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.create_sale(p_cash_session_id uuid, p_items jsonb, p_payment jsonb, p_order_discount numeric DEFAULT 0, p_customer_name text DEFAULT NULL::text, p_customer_phone text DEFAULT NULL::text, p_note text DEFAULT NULL::text, p_shipping_cost numeric DEFAULT 0)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_uid uuid := auth.uid();
+  v_main uuid := '00000000-0000-0000-0000-0000000000c1';
+  v_session public.cash_sessions%rowtype;
+  v_settings public.store_settings%rowtype;
+  v_bs public.branch_settings%rowtype;
+  v_branch uuid;
+  v_tax_enabled boolean; v_tax_percent numeric; v_tax_inclusive boolean;
+  v_item jsonb;
+  v_pid uuid; v_price numeric(14,2); v_pname text; v_psku text; v_ptax boolean;
+  v_qty numeric(14,3);
+  v_line_disc numeric(14,2); v_line_total numeric(14,2); v_stock_after numeric(14,3);
+  v_gross numeric(14,2) := 0; v_line_disc_total numeric(14,2) := 0;
+  v_taxable_net numeric(14,2) := 0; v_tax_total numeric(14,2) := 0;
+  v_discount_total numeric(14,2) := 0; v_grand numeric(14,2) := 0;
+  v_ship numeric(14,2) := round(coalesce(p_shipping_cost, 0), 2);
+  v_rate numeric := 0;
+  v_trx_id uuid; v_code text; v_prefix text; v_datestr text; v_seq int;
+  v_method payment_method; v_bank text;
+  v_cash_received numeric(14,2); v_change numeric(14,2) := 0;
+begin
+  if v_uid is null then raise exception 'Tidak terautentikasi'; end if;
+  if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
+    raise exception 'Keranjang kosong';
+  end if;
+  if v_ship < 0 then v_ship := 0; end if;
+
+  select * into v_session from public.cash_sessions where id = p_cash_session_id;
+  if not found then raise exception 'Shift tidak ditemukan'; end if;
+  if v_session.cashier_id <> v_uid and not public.is_admin() then
+    raise exception 'Shift bukan milik Anda';
+  end if;
+  if v_session.status <> 'open' then raise exception 'Shift sudah ditutup'; end if;
+
+  v_branch := v_session.branch_id;
+  select * into v_bs from public.branch_settings where branch_id = v_branch;
+  select * into v_settings from public.store_settings limit 1;
+  v_tax_enabled   := coalesce(v_bs.tax_enabled, v_settings.tax_enabled, false);
+  v_tax_percent   := coalesce(v_bs.tax_percent, v_settings.tax_percent, 0);
+  v_tax_inclusive := coalesce(v_bs.tax_inclusive, v_settings.tax_inclusive, false);
+
+  v_method := (p_payment->>'method')::payment_method;
+  v_bank := nullif(p_payment->>'bank','');
+  if v_method = 'transfer' and v_bank is null then
+    raise exception 'Bank wajib dipilih untuk transfer';
+  end if;
+
+  v_prefix := coalesce(v_bs.trx_prefix, v_settings.trx_prefix, 'TRX');
+  v_datestr := to_char((now() at time zone 'Asia/Jakarta'), 'YYYYMMDD');
+  perform pg_advisory_xact_lock(hashtext(v_branch::text || v_prefix || v_datestr));
+  select count(*) + 1 into v_seq from public.transactions
+    where branch_id = v_branch and code like v_prefix || '-' || v_datestr || '-%';
+  v_code := v_prefix || '-' || v_datestr || '-' || lpad(v_seq::text, 4, '0');
+
+  insert into public.transactions (
+    branch_id, code, cashier_id, cash_session_id, customer_name, customer_phone,
+    subtotal, discount_total, tax_total, grand_total, shipping_cost, status, note
+  ) values (
+    v_branch, v_code, v_uid, p_cash_session_id, p_customer_name, p_customer_phone,
+    0, 0, 0, 0, v_ship, 'completed', p_note
+  ) returning id into v_trx_id;
+
+  for v_item in select * from jsonb_array_elements(p_items)
+  loop
+    v_qty := (v_item->>'qty')::numeric;
+    if v_qty is null or v_qty <= 0 then raise exception 'Qty tidak valid'; end if;
+    v_pid := (v_item->>'product_id')::uuid;
+
+    select bp.price, p.name, p.sku, p.is_taxable
+      into v_price, v_pname, v_psku, v_ptax
+      from public.branch_products bp
+      join public.products p on p.id = bp.product_id
+      where bp.branch_id = v_branch and bp.product_id = v_pid
+        and bp.is_active and p.deleted_at is null
+      for update of bp;
+    if not found then raise exception 'Produk tidak tersedia di cabang ini'; end if;
+
+    v_line_disc := round(coalesce((v_item->>'discount')::numeric, 0), 2);
+    v_line_total := round(v_price * v_qty - v_line_disc, 2);
+    if v_line_total < 0 then v_line_total := 0; end if;
+    v_gross := v_gross + round(v_price * v_qty, 2);
+    v_line_disc_total := v_line_disc_total + v_line_disc;
+    if v_ptax then v_taxable_net := v_taxable_net + v_line_total; end if;
+
+    update public.branch_products set stock = stock - v_qty
+      where branch_id = v_branch and product_id = v_pid returning stock into v_stock_after;
+    if v_stock_after < 0 then raise exception 'Stok % tidak cukup', v_pname; end if;
+    if v_branch = v_main then
+      update public.products set stock = v_stock_after where id = v_pid;
+    end if;
+
+    insert into public.transaction_items (
+      transaction_id, product_id, product_name_snapshot, sku_snapshot,
+      unit_price, qty, discount, line_total
+    ) values (
+      v_trx_id, v_pid, v_pname, v_psku, v_price, v_qty, v_line_disc, v_line_total
+    );
+
+    insert into public.stock_movements (
+      branch_id, product_id, type, qty_change, stock_after, reference_id, note, created_by
+    ) values (
+      v_branch, v_pid, 'sale', -v_qty, v_stock_after, v_trx_id, 'Penjualan ' || v_code, v_uid
+    );
+  end loop;
+
+  if v_tax_enabled then
+    v_rate := v_tax_percent / 100.0;
+    if v_tax_inclusive then
+      v_tax_total := round(v_taxable_net - (v_taxable_net / (1 + v_rate)), 2);
+    else
+      v_tax_total := round(v_taxable_net * v_rate, 2);
+    end if;
+  end if;
+
+  v_discount_total := round(v_line_disc_total + coalesce(p_order_discount, 0), 2);
+  if v_tax_enabled and v_tax_inclusive then
+    v_grand := round(v_gross - coalesce(p_order_discount, 0), 2);
+  else
+    v_grand := round(v_gross - v_discount_total + v_tax_total, 2);
+  end if;
+  if v_grand < 0 then v_grand := 0; end if;
+  v_grand := round(v_grand + v_ship, 2);
+
+  if v_method = 'cash' then
+    v_cash_received := round(coalesce((p_payment->>'cash_received')::numeric, 0), 2);
+    if v_cash_received < v_grand then raise exception 'Uang diterima kurang dari total'; end if;
+    v_change := round(v_cash_received - v_grand, 2);
+  end if;
+
+  insert into public.payments (
+    branch_id, transaction_id, method, bank, amount, cash_received, change_given, reference
+  ) values (
+    v_branch, v_trx_id, v_method, v_bank, v_grand,
+    case when v_method = 'cash' then v_cash_received end,
+    case when v_method = 'cash' then v_change end,
+    nullif(p_payment->>'reference','')
+  );
+
+  update public.transactions set
+    subtotal = v_gross, discount_total = v_discount_total,
+    tax_total = v_tax_total, grand_total = v_grand
+  where id = v_trx_id;
+
+  update public.cash_sessions set
+    total_cash       = total_cash       + case when v_method = 'cash'       then v_grand else 0 end,
+    total_qris       = total_qris       + case when v_method = 'qris'       then v_grand else 0 end,
+    total_transfer   = total_transfer   + case when v_method = 'transfer'   then v_grand else 0 end,
+    total_gofood     = total_gofood     + case when v_method = 'gofood'     then v_grand else 0 end,
+    total_shopeefood = total_shopeefood + case when v_method = 'shopeefood' then v_grand else 0 end,
+    total_grabfood   = total_grabfood   + case when v_method = 'grabfood'   then v_grand else 0 end
+  where id = p_cash_session_id;
+
+  insert into public.audit_logs (branch_id, actor_id, action, entity, entity_id, metadata)
+  values (v_branch, v_uid, 'sale.create', 'transaction', v_trx_id,
+          jsonb_build_object('code', v_code, 'grand_total', v_grand, 'method', v_method,
+                             'shipping_cost', v_ship));
+
+  return jsonb_build_object('transaction_id', v_trx_id, 'code', v_code,
+                            'grand_total', v_grand, 'change_given', v_change);
+end;
+$function$
+"
+create_transfer,"p_from_branch uuid, p_to_branch uuid, p_note text, p_items jsonb",plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.create_transfer(p_from_branch uuid, p_to_branch uuid, p_note text DEFAULT NULL::text, p_items jsonb DEFAULT '[]'::jsonb)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_uid uuid := auth.uid();
+  v_code text; v_seq int; v_datestr text; v_tid uuid;
+  v_item jsonb;
+begin
+  if v_uid is null then raise exception 'Tidak terautentikasi'; end if;
+  if p_from_branch = p_to_branch then raise exception 'Cabang asal & tujuan tidak boleh sama'; end if;
+  if not (public.is_master_admin() or public.has_branch_permission(p_from_branch, 'stock.transfer_request')) then
+    raise exception 'Tidak berwenang membuat transfer dari cabang ini';
+  end if;
+  if p_items is null or jsonb_array_length(p_items) = 0 then raise exception 'Tidak ada item'; end if;
+
+  v_datestr := to_char((now() at time zone 'Asia/Jakarta'), 'YYYYMMDD');
+  select count(*) + 1 into v_seq from public.stock_transfers where code like 'TRF-' || v_datestr || '-%';
+  v_code := 'TRF-' || v_datestr || '-' || lpad(v_seq::text, 4, '0');
+
+  insert into public.stock_transfers (code, from_branch_id, to_branch_id, status, created_by, note)
+    values (v_code, p_from_branch, p_to_branch, 'draft', v_uid, p_note) returning id into v_tid;
+
+  for v_item in select * from jsonb_array_elements(p_items)
+  loop
+    insert into public.stock_transfer_items (transfer_id, product_id, qty)
+      values (v_tid, (v_item->>'product_id')::uuid, (v_item->>'qty')::numeric);
+  end loop;
+
+  insert into public.audit_logs (branch_id, actor_id, action, entity, entity_id, metadata)
+    values (p_from_branch, v_uid, 'transfer.create', 'stock_transfer', v_tid, jsonb_build_object('code', v_code));
+  return jsonb_build_object('id', v_tid, 'code', v_code);
+end $function$
+"
+dashboard_analytics,"p_from timestamp with time zone, p_to timestamp with time zone, p_bucket text, p_branch_id uuid",plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.dashboard_analytics(p_from timestamp with time zone, p_to timestamp with time zone, p_bucket text DEFAULT 'day'::text, p_branch_id uuid DEFAULT NULL::uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  j text := 'Asia/Jakarta';
+  bucket text := case when p_bucket in ('day','week','month') then p_bucket else 'day' end;
+begin
+  if not public.is_admin() then raise exception 'Hanya admin'; end if;
+  return jsonb_build_object(
+    'revenue', (select coalesce(sum(grand_total),0) from public.transactions where status='completed' and created_at between p_from and p_to and (p_branch_id is null or branch_id=p_branch_id)),
+    'tx_count', (select count(*) from public.transactions where status='completed' and created_at between p_from and p_to and (p_branch_id is null or branch_id=p_branch_id)),
+    'items_sold', (select coalesce(sum(ti.qty),0) from public.transaction_items ti join public.transactions t on t.id=ti.transaction_id and t.status='completed' and t.created_at between p_from and p_to and (p_branch_id is null or t.branch_id=p_branch_id)),
+    'gross_profit', (select coalesce(sum(ti.line_total - ti.qty*coalesce(p.cost_price,0)),0) from public.transaction_items ti join public.transactions t on t.id=ti.transaction_id and t.status='completed' and t.created_at between p_from and p_to and (p_branch_id is null or t.branch_id=p_branch_id) left join public.products p on p.id=ti.product_id),
+    'shipping_total', (select coalesce(sum(shipping_cost),0) from public.transactions where status='completed' and created_at between p_from and p_to and (p_branch_id is null or branch_id=p_branch_id)),
+    'expenses_total', (select coalesce(sum(amount),0) from public.cash_expenses where created_at between p_from and p_to and (p_branch_id is null or branch_id=p_branch_id)),
+    'by_method', (select coalesce(jsonb_object_agg(method, amt), '{}'::jsonb) from (select pm.method::text as method, sum(pm.amount) as amt from public.payments pm join public.transactions t on t.id=pm.transaction_id and t.status='completed' and t.created_at between p_from and p_to and (p_branch_id is null or t.branch_id=p_branch_id) group by pm.method) m),
+    'by_bank', (select coalesce(jsonb_object_agg(bank, amt), '{}'::jsonb) from (select pm.bank::text as bank, sum(pm.amount) as amt from public.payments pm join public.transactions t on t.id=pm.transaction_id and t.status='completed' and t.created_at between p_from and p_to and (p_branch_id is null or t.branch_id=p_branch_id) where pm.method='transfer' and pm.bank is not null group by pm.bank) b),
+    'trend', (select coalesce(jsonb_agg(jsonb_build_object('bucket', b, 'revenue', rev, 'tx_count', cnt) order by b), '[]'::jsonb) from (select (date_trunc(bucket, (created_at at time zone j)))::date as b, sum(grand_total) as rev, count(*) as cnt from public.transactions where status='completed' and created_at between p_from and p_to and (p_branch_id is null or branch_id=p_branch_id) group by 1) s),
+    'top_products', (select coalesce(jsonb_agg(jsonb_build_object('name', name, 'qty', qty, 'revenue', rev) order by rev desc), '[]'::jsonb) from (select ti.product_name_snapshot as name, sum(ti.qty) as qty, sum(ti.line_total) as rev from public.transaction_items ti join public.transactions t on t.id=ti.transaction_id and t.status='completed' and t.created_at between p_from and p_to and (p_branch_id is null or t.branch_id=p_branch_id) group by ti.product_name_snapshot order by rev desc limit 10) tp),
+    'by_category', (select coalesce(jsonb_agg(jsonb_build_object('category', cat, 'qty', qty, 'revenue', rev) order by rev desc), '[]'::jsonb) from (select coalesce(c.name,'Tanpa kategori') as cat, sum(ti.qty) as qty, sum(ti.line_total) as rev from public.transaction_items ti join public.transactions t on t.id=ti.transaction_id and t.status='completed' and t.created_at between p_from and p_to and (p_branch_id is null or t.branch_id=p_branch_id) left join public.products p on p.id=ti.product_id left join public.categories c on c.id=p.category_id group by 1 order by rev desc) bc),
+    'by_cashier', (select coalesce(jsonb_agg(jsonb_build_object('cashier', name, 'revenue', rev, 'tx_count', cnt) order by rev desc), '[]'::jsonb) from (select coalesce(pr.full_name,'-') as name, sum(t.grand_total) as rev, count(*) as cnt from public.transactions t left join public.profiles pr on pr.id=t.cashier_id where t.status='completed' and t.created_at between p_from and p_to and (p_branch_id is null or t.branch_id=p_branch_id) group by 1 order by rev desc) bcs)
+  );
+end; $function$
+"
+dashboard_kpis,p_branch_id uuid,plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.dashboard_kpis(p_branch_id uuid DEFAULT NULL::uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  j text := 'Asia/Jakarta';
+  today_start timestamptz; week_start timestamptz; month_start timestamptz;
+begin
+  if not public.is_admin() then raise exception 'Hanya admin'; end if;
+  today_start := (date_trunc('day', now() at time zone j)) at time zone j;
+  week_start := (date_trunc('week', now() at time zone j)) at time zone j;
+  month_start := (date_trunc('month', now() at time zone j)) at time zone j;
+
+  return jsonb_build_object(
+    'today', (select jsonb_build_object('revenue', coalesce(sum(grand_total),0), 'count', count(*))
+      from public.transactions where status='completed' and created_at >= today_start
+        and (p_branch_id is null or branch_id = p_branch_id)),
+    'week', (select jsonb_build_object('revenue', coalesce(sum(grand_total),0), 'count', count(*))
+      from public.transactions where status='completed' and created_at >= week_start
+        and (p_branch_id is null or branch_id = p_branch_id)),
+    'month', (select jsonb_build_object('revenue', coalesce(sum(grand_total),0), 'count', count(*))
+      from public.transactions where status='completed' and created_at >= month_start
+        and (p_branch_id is null or branch_id = p_branch_id)),
+    'avg_month', (select coalesce(avg(grand_total),0)
+      from public.transactions where status='completed' and created_at >= month_start
+        and (p_branch_id is null or branch_id = p_branch_id)),
+    'gross_profit_month', (select coalesce(sum(ti.line_total - ti.qty*coalesce(p.cost_price,0)),0)
+      from public.transaction_items ti
+      join public.transactions t on t.id=ti.transaction_id and t.status='completed' and t.created_at >= month_start
+        and (p_branch_id is null or t.branch_id = p_branch_id)
+      left join public.products p on p.id=ti.product_id)
+  );
+end; $function$
+"
+dispatch_transfer,p_transfer_id uuid,plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.dispatch_transfer(p_transfer_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_uid uuid := auth.uid();
+  v_main uuid := '00000000-0000-0000-0000-0000000000c1';
+  v_t public.stock_transfers%rowtype;
+  v_it record; v_after numeric(14,3);
+begin
+  if v_uid is null then raise exception 'Tidak terautentikasi'; end if;
+  select * into v_t from public.stock_transfers where id = p_transfer_id for update;
+  if not found then raise exception 'Transfer tidak ditemukan'; end if;
+  if v_t.status <> 'draft' then raise exception 'Transfer sudah diproses'; end if;
+  if not (public.is_master_admin() or public.has_branch_permission(v_t.from_branch_id, 'stock.transfer_request')) then
+    raise exception 'Tidak berwenang mengirim transfer ini';
+  end if;
+
+  for v_it in select product_id, qty from public.stock_transfer_items where transfer_id = p_transfer_id
+  loop
+    update public.branch_products set stock = stock - v_it.qty
+      where branch_id = v_t.from_branch_id and product_id = v_it.product_id returning stock into v_after;
+    if not found then raise exception 'Produk tidak ada di cabang asal'; end if;
+    if v_after < 0 then raise exception 'Stok cabang asal tidak cukup'; end if;
+    if v_t.from_branch_id = v_main then update public.products set stock = v_after where id = v_it.product_id; end if;
+    insert into public.stock_movements (branch_id, product_id, type, qty_change, stock_after, reference_id, note, created_by)
+      values (v_t.from_branch_id, v_it.product_id, 'transfer_out', -v_it.qty, v_after, p_transfer_id, 'Transfer keluar ' || v_t.code, v_uid);
+  end loop;
+
+  update public.stock_transfers set status = 'dispatched', dispatched_by = v_uid, dispatched_at = now() where id = p_transfer_id;
+  insert into public.audit_logs (branch_id, actor_id, action, entity, entity_id, metadata)
+    values (v_t.from_branch_id, v_uid, 'transfer.dispatch', 'stock_transfer', p_transfer_id, jsonb_build_object('code', v_t.code));
+  return jsonb_build_object('status', 'dispatched');
+end $function$
+"
+gin_extract_query_trgm,"text, internal, smallint, internal, internal, internal, internal",c,false,i,"CREATE OR REPLACE FUNCTION public.gin_extract_query_trgm(text, internal, smallint, internal, internal, internal, internal)
+ RETURNS internal
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$gin_extract_query_trgm$function$
+"
+gin_extract_value_trgm,"text, internal",c,false,i,"CREATE OR REPLACE FUNCTION public.gin_extract_value_trgm(text, internal)
+ RETURNS internal
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$gin_extract_value_trgm$function$
+"
+gin_trgm_consistent,"internal, smallint, text, integer, internal, internal, internal, internal",c,false,i,"CREATE OR REPLACE FUNCTION public.gin_trgm_consistent(internal, smallint, text, integer, internal, internal, internal, internal)
+ RETURNS boolean
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$gin_trgm_consistent$function$
+"
+gin_trgm_triconsistent,"internal, smallint, text, integer, internal, internal, internal",c,false,i,"CREATE OR REPLACE FUNCTION public.gin_trgm_triconsistent(internal, smallint, text, integer, internal, internal, internal)
+ RETURNS ""char""
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$gin_trgm_triconsistent$function$
+"
+gtrgm_compress,internal,c,false,i,"CREATE OR REPLACE FUNCTION public.gtrgm_compress(internal)
+ RETURNS internal
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$gtrgm_compress$function$
+"
+gtrgm_consistent,"internal, text, smallint, oid, internal",c,false,i,"CREATE OR REPLACE FUNCTION public.gtrgm_consistent(internal, text, smallint, oid, internal)
+ RETURNS boolean
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$gtrgm_consistent$function$
+"
+gtrgm_decompress,internal,c,false,i,"CREATE OR REPLACE FUNCTION public.gtrgm_decompress(internal)
+ RETURNS internal
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$gtrgm_decompress$function$
+"
+gtrgm_distance,"internal, text, smallint, oid, internal",c,false,i,"CREATE OR REPLACE FUNCTION public.gtrgm_distance(internal, text, smallint, oid, internal)
+ RETURNS double precision
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$gtrgm_distance$function$
+"
+gtrgm_in,cstring,c,false,i,"CREATE OR REPLACE FUNCTION public.gtrgm_in(cstring)
+ RETURNS gtrgm
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$gtrgm_in$function$
+"
+gtrgm_options,internal,c,false,i,"CREATE OR REPLACE FUNCTION public.gtrgm_options(internal)
+ RETURNS void
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE
+AS '$libdir/pg_trgm', $function$gtrgm_options$function$
+"
+gtrgm_out,gtrgm,c,false,i,"CREATE OR REPLACE FUNCTION public.gtrgm_out(gtrgm)
+ RETURNS cstring
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$gtrgm_out$function$
+"
+gtrgm_penalty,"internal, internal, internal",c,false,i,"CREATE OR REPLACE FUNCTION public.gtrgm_penalty(internal, internal, internal)
+ RETURNS internal
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$gtrgm_penalty$function$
+"
+gtrgm_picksplit,"internal, internal",c,false,i,"CREATE OR REPLACE FUNCTION public.gtrgm_picksplit(internal, internal)
+ RETURNS internal
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$gtrgm_picksplit$function$
+"
+gtrgm_same,"gtrgm, gtrgm, internal",c,false,i,"CREATE OR REPLACE FUNCTION public.gtrgm_same(gtrgm, gtrgm, internal)
+ RETURNS internal
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$gtrgm_same$function$
+"
+gtrgm_union,"internal, internal",c,false,i,"CREATE OR REPLACE FUNCTION public.gtrgm_union(internal, internal)
+ RETURNS gtrgm
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$gtrgm_union$function$
+"
+guard_append_only,,plpgsql,false,v,"CREATE OR REPLACE FUNCTION public.guard_append_only()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+begin
+  raise exception 'Tabel % bersifat append-only: UPDATE/DELETE tidak diizinkan.', tg_table_name;
+end $function$
+"
+guard_profile_privilege,,plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.guard_profile_privilege()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  if auth.uid() is not null and not public.is_admin() then
+    if new.role is distinct from old.role
+       or new.permissions is distinct from old.permissions
+       or new.is_active is distinct from old.is_active then
+      raise exception 'Tidak berwenang mengubah role/permissions/status akun';
+    end if;
+  end if;
+  return new;
+end;
+$function$
+"
+handle_new_user,,plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.handle_new_user()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  insert into public.profiles (id, full_name)
+  values (new.id, coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)))
+  on conflict (id) do nothing;
+  return new;
+end;
+$function$
+"
+has_branch_permission,"b uuid, perm text",sql,true,s,"CREATE OR REPLACE FUNCTION public.has_branch_permission(b uuid, perm text)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select public.is_master_admin() or exists (
+    select 1 from public.branch_memberships
+    where user_id = auth.uid() and branch_id = b and is_active = true
+      and perm = any(permissions)
+  );
+$function$
+"
+has_branch_role,"b uuid, r branch_role",sql,true,s,"CREATE OR REPLACE FUNCTION public.has_branch_role(b uuid, r branch_role)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select public.is_master_admin() or exists (
+    select 1 from public.branch_memberships
+    where user_id = auth.uid() and branch_id = b and role = r and is_active = true
+  );
+$function$
+"
+has_permission,perm text,sql,true,s,"CREATE OR REPLACE FUNCTION public.has_permission(perm text)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid()
+      and is_active
+      and (role = 'admin' or perm = any(permissions))
+  );
+$function$
+"
+hash_chain,,plpgsql,false,v,"CREATE OR REPLACE FUNCTION public.hash_chain()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SET search_path TO 'public', 'extensions'
+AS $function$
+declare v_prev text; v_json text;
+begin
+  execute format('select row_hash from public.%I order by created_at desc, id desc limit 1', tg_table_name) into v_prev;
+  v_json := (to_jsonb(new) - 'prev_hash' - 'row_hash')::text;
+  new.prev_hash := v_prev;
+  new.row_hash := encode(digest(v_json || coalesce(v_prev, ''), 'sha256'), 'hex');
+  return new;
+end $function$
+"
+is_admin,,sql,true,s,"CREATE OR REPLACE FUNCTION public.is_admin()
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role = 'admin' and is_active
+  );
+$function$
+"
+is_master_admin,,sql,true,s,"CREATE OR REPLACE FUNCTION public.is_master_admin()
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select coalesce((select is_master_admin from public.profiles where id = auth.uid()), false);
+$function$
+"
+receive_goods,"p_branch_id uuid, p_supplier_id uuid, p_note text, p_items jsonb",plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.receive_goods(p_branch_id uuid, p_supplier_id uuid DEFAULT NULL::uuid, p_note text DEFAULT NULL::text, p_items jsonb DEFAULT '[]'::jsonb)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_uid uuid := auth.uid();
+  v_main uuid := '00000000-0000-0000-0000-0000000000c1';
+  v_code text; v_seq int; v_datestr text; v_rid uuid;
+  v_item jsonb; v_pid uuid; v_qty numeric(14,3); v_cost numeric(14,2); v_after numeric(14,3);
+begin
+  if v_uid is null then raise exception 'Tidak terautentikasi'; end if;
+  if not (public.is_master_admin() or public.has_branch_permission(p_branch_id, 'stock.receive')) then
+    raise exception 'Tidak berwenang menerima barang di cabang ini';
+  end if;
+  if p_items is null or jsonb_array_length(p_items) = 0 then raise exception 'Tidak ada item'; end if;
+
+  v_datestr := to_char((now() at time zone 'Asia/Jakarta'), 'YYYYMMDD');
+  select count(*) + 1 into v_seq from public.goods_receipts
+    where branch_id = p_branch_id and code like 'GRN-' || v_datestr || '-%';
+  v_code := 'GRN-' || v_datestr || '-' || lpad(v_seq::text, 4, '0');
+
+  insert into public.goods_receipts (branch_id, code, supplier_id, status, received_by, received_at, note)
+    values (p_branch_id, v_code, p_supplier_id, 'received', v_uid, now(), p_note)
+    returning id into v_rid;
+
+  for v_item in select * from jsonb_array_elements(p_items)
+  loop
+    v_pid := (v_item->>'product_id')::uuid;
+    v_qty := (v_item->>'qty')::numeric;
+    v_cost := nullif(v_item->>'cost_price','')::numeric;
+    if v_qty is null or v_qty <= 0 then raise exception 'Jumlah tidak valid'; end if;
+
+    insert into public.goods_receipt_items (receipt_id, product_id, qty, cost_price)
+      values (v_rid, v_pid, v_qty, v_cost);
+
+    update public.branch_products set stock = stock + v_qty
+      where branch_id = p_branch_id and product_id = v_pid returning stock into v_after;
+    if not found then raise exception 'Produk tidak tersedia di cabang'; end if;
+
+    if v_cost is not null then
+      update public.products set base_cost_price = v_cost, cost_price = v_cost where id = v_pid;
+    end if;
+    if p_branch_id = v_main then
+      update public.products set stock = v_after where id = v_pid;
+    end if;
+
+    insert into public.stock_movements (branch_id, product_id, type, qty_change, stock_after, reference_id, note, created_by)
+      values (p_branch_id, v_pid, 'restock', v_qty, v_after, v_rid, coalesce(p_note, 'Penerimaan ' || v_code), v_uid);
+  end loop;
+
+  insert into public.audit_logs (branch_id, actor_id, action, entity, entity_id, metadata)
+    values (p_branch_id, v_uid, 'stock.receive', 'goods_receipt', v_rid, jsonb_build_object('code', v_code));
+
+  return jsonb_build_object('id', v_rid, 'code', v_code);
+end $function$
+"
+receive_transfer,p_transfer_id uuid,plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.receive_transfer(p_transfer_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_uid uuid := auth.uid();
+  v_main uuid := '00000000-0000-0000-0000-0000000000c1';
+  v_t public.stock_transfers%rowtype;
+  v_it record; v_after numeric(14,3);
+begin
+  if v_uid is null then raise exception 'Tidak terautentikasi'; end if;
+  select * into v_t from public.stock_transfers where id = p_transfer_id for update;
+  if not found then raise exception 'Transfer tidak ditemukan'; end if;
+  if v_t.status <> 'dispatched' then raise exception 'Transfer belum dikirim / sudah diterima'; end if;
+  if not (public.is_master_admin() or public.has_branch_permission(v_t.to_branch_id, 'stock.transfer_receive')) then
+    raise exception 'Tidak berwenang menerima transfer ini';
+  end if;
+
+  for v_it in select product_id, qty from public.stock_transfer_items where transfer_id = p_transfer_id
+  loop
+    -- Pastikan baris katalog cabang tujuan ada.
+    insert into public.branch_products (branch_id, product_id, price, min_stock, stock, is_active)
+      select v_t.to_branch_id, v_it.product_id, coalesce(p.sell_price, 0), 0, 0, true
+      from public.products p where p.id = v_it.product_id
+      on conflict (branch_id, product_id) do nothing;
+
+    update public.branch_products set stock = stock + v_it.qty
+      where branch_id = v_t.to_branch_id and product_id = v_it.product_id returning stock into v_after;
+    if v_t.to_branch_id = v_main then update public.products set stock = v_after where id = v_it.product_id; end if;
+    insert into public.stock_movements (branch_id, product_id, type, qty_change, stock_after, reference_id, note, created_by)
+      values (v_t.to_branch_id, v_it.product_id, 'transfer_in', v_it.qty, v_after, p_transfer_id, 'Transfer masuk ' || v_t.code, v_uid);
+  end loop;
+
+  update public.stock_transfers set status = 'received', received_by = v_uid, received_at = now() where id = p_transfer_id;
+  insert into public.audit_logs (branch_id, actor_id, action, entity, entity_id, metadata)
+    values (v_t.to_branch_id, v_uid, 'transfer.receive', 'stock_transfer', p_transfer_id, jsonb_build_object('code', v_t.code));
+  return jsonb_build_object('status', 'received');
+end $function$
+"
+record_wastage,"p_branch_id uuid, p_reason text, p_photo_url text, p_items jsonb",plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.record_wastage(p_branch_id uuid, p_reason text, p_photo_url text DEFAULT NULL::text, p_items jsonb DEFAULT '[]'::jsonb)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_uid uuid := auth.uid();
+  v_main uuid := '00000000-0000-0000-0000-0000000000c1';
+  v_code text; v_seq int; v_datestr text; v_wid uuid;
+  v_item jsonb; v_pid uuid; v_qty numeric(14,3); v_after numeric(14,3);
+begin
+  if v_uid is null then raise exception 'Tidak terautentikasi'; end if;
+  if not (public.is_master_admin() or public.has_branch_permission(p_branch_id, 'stock.wastage')) then
+    raise exception 'Tidak berwenang mencatat barang rusak di cabang ini';
+  end if;
+  if p_items is null or jsonb_array_length(p_items) = 0 then raise exception 'Tidak ada item'; end if;
+
+  v_datestr := to_char((now() at time zone 'Asia/Jakarta'), 'YYYYMMDD');
+  select count(*) + 1 into v_seq from public.wastages
+    where branch_id = p_branch_id and code like 'WST-' || v_datestr || '-%';
+  v_code := 'WST-' || v_datestr || '-' || lpad(v_seq::text, 4, '0');
+
+  insert into public.wastages (branch_id, code, status, reason, photo_url, created_by, approved_by)
+    values (p_branch_id, v_code, 'approved', p_reason, p_photo_url, v_uid, v_uid)
+    returning id into v_wid;
+
+  for v_item in select * from jsonb_array_elements(p_items)
+  loop
+    v_pid := (v_item->>'product_id')::uuid;
+    v_qty := (v_item->>'qty')::numeric;
+    if v_qty is null or v_qty <= 0 then raise exception 'Jumlah tidak valid'; end if;
+
+    insert into public.wastage_items (wastage_id, product_id, qty) values (v_wid, v_pid, v_qty);
+
+    update public.branch_products set stock = stock - v_qty
+      where branch_id = p_branch_id and product_id = v_pid returning stock into v_after;
+    if not found then raise exception 'Produk tidak tersedia di cabang'; end if;
+    if v_after < 0 then raise exception 'Stok tidak cukup untuk dibuang'; end if;
+    if p_branch_id = v_main then
+      update public.products set stock = v_after where id = v_pid;
+    end if;
+
+    insert into public.stock_movements (branch_id, product_id, type, qty_change, stock_after, reference_id, note, created_by)
+      values (p_branch_id, v_pid, 'wastage', -v_qty, v_after, v_wid, coalesce(p_reason, 'Barang rusak ' || v_code), v_uid);
+  end loop;
+
+  insert into public.audit_logs (branch_id, actor_id, action, entity, entity_id, metadata)
+    values (p_branch_id, v_uid, 'stock.wastage', 'wastage', v_wid, jsonb_build_object('code', v_code, 'reason', p_reason));
+
+  return jsonb_build_object('id', v_wid, 'code', v_code);
+end $function$
+"
+refund_sale,"p_transaction_id uuid, p_reason text",plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.refund_sale(p_transaction_id uuid, p_reason text DEFAULT NULL::text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_uid uuid := auth.uid();
+  v_main uuid := '00000000-0000-0000-0000-0000000000c1';
+  v_trx public.transactions%rowtype;
+  v_item record; v_pay record; v_stock_after numeric(14,3);
+begin
+  if v_uid is null then raise exception 'Tidak terautentikasi'; end if;
+  if not (public.is_admin() or public.has_permission('transaction.refund')) then
+    raise exception 'Tidak berwenang melakukan refund';
+  end if;
+  select * into v_trx from public.transactions where id = p_transaction_id for update;
+  if not found then raise exception 'Transaksi tidak ditemukan'; end if;
+  if v_trx.status <> 'completed' then raise exception 'Hanya transaksi selesai yang bisa di-refund'; end if;
+
+  for v_item in
+    select product_id, qty from public.transaction_items
+    where transaction_id = p_transaction_id and product_id is not null
+  loop
+    update public.branch_products set stock = stock + v_item.qty
+      where branch_id = v_trx.branch_id and product_id = v_item.product_id
+      returning stock into v_stock_after;
+    if found then
+      if v_trx.branch_id = v_main then
+        update public.products set stock = v_stock_after where id = v_item.product_id;
+      end if;
+      insert into public.stock_movements (branch_id, product_id, type, qty_change, stock_after, reference_id, note, created_by)
+        values (v_trx.branch_id, v_item.product_id, 'refund', v_item.qty, v_stock_after, p_transaction_id, 'Refund ' || v_trx.code, v_uid);
+    end if;
+  end loop;
+
+  if v_trx.cash_session_id is not null then
+    for v_pay in select method, amount from public.payments where transaction_id = p_transaction_id
+    loop
+      update public.cash_sessions set
+        total_cash       = total_cash       - case when v_pay.method = 'cash'       then v_pay.amount else 0 end,
+        total_qris       = total_qris       - case when v_pay.method = 'qris'       then v_pay.amount else 0 end,
+        total_transfer   = total_transfer   - case when v_pay.method = 'transfer'   then v_pay.amount else 0 end,
+        total_gofood     = total_gofood     - case when v_pay.method = 'gofood'     then v_pay.amount else 0 end,
+        total_shopeefood = total_shopeefood - case when v_pay.method = 'shopeefood' then v_pay.amount else 0 end,
+        total_grabfood   = total_grabfood   - case when v_pay.method = 'grabfood'   then v_pay.amount else 0 end
+      where id = v_trx.cash_session_id;
+    end loop;
+  end if;
+
+  update public.transactions set
+    status = 'refunded', voided_by = v_uid, voided_at = now(),
+    note = coalesce(note, '') || case when p_reason is not null then ' | Refund: ' || p_reason else ' | Refund' end
+  where id = p_transaction_id;
+
+  insert into public.audit_logs (branch_id, actor_id, action, entity, entity_id, metadata)
+  values (v_trx.branch_id, v_uid, 'sale.refund', 'transaction', p_transaction_id, jsonb_build_object('code', v_trx.code, 'reason', p_reason));
+  return jsonb_build_object('transaction_id', p_transaction_id, 'status', 'refunded');
+end; $function$
+"
+reject_wastage,p_wastage_id uuid,plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.reject_wastage(p_wastage_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_uid uuid := auth.uid();
+  v_w public.wastages%rowtype;
+begin
+  if v_uid is null then raise exception 'Tidak terautentikasi'; end if;
+  select * into v_w from public.wastages where id = p_wastage_id for update;
+  if not found then raise exception 'Data barang rusak tidak ditemukan'; end if;
+  if v_w.status <> 'pending_approval' then raise exception 'Barang rusak sudah diputuskan'; end if;
+  if not (public.is_master_admin() or public.has_branch_role(v_w.branch_id, 'manager')
+          or public.has_branch_permission(v_w.branch_id, 'approval.grant')) then
+    raise exception 'Tidak berwenang menolak barang rusak';
+  end if;
+
+  update public.wastages set status = 'rejected', approved_by = v_uid where id = p_wastage_id;
+  insert into public.audit_logs (branch_id, actor_id, action, entity, entity_id, metadata)
+    values (v_w.branch_id, v_uid, 'stock.wastage_reject', 'wastage', p_wastage_id, jsonb_build_object('code', v_w.code));
+  return jsonb_build_object('ok', true);
+end $function$
+"
+request_wastage,"p_branch_id uuid, p_reason text, p_items jsonb",plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.request_wastage(p_branch_id uuid, p_reason text, p_items jsonb)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_uid uuid := auth.uid();
+  v_code text; v_seq int; v_datestr text; v_wid uuid;
+  v_item jsonb; v_pid uuid; v_qty numeric(14,3);
+  v_items_snap jsonb := '[]'::jsonb;
+begin
+  if v_uid is null then raise exception 'Tidak terautentikasi'; end if;
+  if not (public.is_master_admin() or public.has_branch_permission(p_branch_id, 'stock.wastage')) then
+    raise exception 'Tidak berwenang mencatat barang rusak di cabang ini';
+  end if;
+  if p_items is null or jsonb_array_length(p_items) = 0 then raise exception 'Tidak ada item'; end if;
+
+  v_datestr := to_char((now() at time zone 'Asia/Jakarta'), 'YYYYMMDD');
+  select count(*) + 1 into v_seq from public.wastages
+    where branch_id = p_branch_id and code like 'WST-' || v_datestr || '-%';
+  v_code := 'WST-' || v_datestr || '-' || lpad(v_seq::text, 4, '0');
+
+  insert into public.wastages (branch_id, code, status, reason, created_by)
+    values (p_branch_id, v_code, 'pending_approval', p_reason, v_uid) returning id into v_wid;
+
+  for v_item in select * from jsonb_array_elements(p_items)
+  loop
+    v_pid := (v_item->>'product_id')::uuid;
+    v_qty := (v_item->>'qty')::numeric;
+    if v_qty is null or v_qty <= 0 then raise exception 'Jumlah tidak valid'; end if;
+    -- Validasi ketersediaan (stok dikurangi nanti saat disetujui).
+    if not exists (select 1 from public.branch_products where branch_id = p_branch_id and product_id = v_pid) then
+      raise exception 'Produk tidak tersedia di cabang';
+    end if;
+    insert into public.wastage_items (wastage_id, product_id, qty) values (v_wid, v_pid, v_qty);
+    v_items_snap := v_items_snap || jsonb_build_object('product_id', v_pid, 'qty', v_qty);
+  end loop;
+
+  insert into public.approvals (branch_id, request_type, reference_type, reference_id, requested_by, status, reason, payload)
+    values (p_branch_id, 'wastage', 'wastage', v_wid, v_uid, 'pending', p_reason,
+            jsonb_build_object('wastage_code', v_code, 'items', v_items_snap));
+
+  insert into public.audit_logs (branch_id, actor_id, action, entity, entity_id, metadata)
+    values (p_branch_id, v_uid, 'stock.wastage_request', 'wastage', v_wid,
+            jsonb_build_object('code', v_code, 'reason', p_reason));
+
+  return jsonb_build_object('id', v_wid, 'code', v_code, 'pending', true);
+end $function$
+"
+restock_product,"p_product_id uuid, p_qty numeric, p_new_cost numeric, p_note text, p_branch_id uuid",plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.restock_product(p_product_id uuid, p_qty numeric, p_new_cost numeric DEFAULT NULL::numeric, p_note text DEFAULT NULL::text, p_branch_id uuid DEFAULT '00000000-0000-0000-0000-0000000000c1'::uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_uid uuid := auth.uid();
+  v_main uuid := '00000000-0000-0000-0000-0000000000c1';
+  v_branch uuid := coalesce(p_branch_id, v_main);
+  v_after numeric(14,3);
+begin
+  if v_uid is null then raise exception 'Tidak terautentikasi'; end if;
+  if not (public.is_admin() or public.has_branch_permission(v_branch, 'stock.receive')) then
+    raise exception 'Tidak berwenang menambah stok';
+  end if;
+  if p_qty is null or p_qty <= 0 then raise exception 'Jumlah harus lebih dari 0'; end if;
+
+  update public.branch_products set stock = stock + p_qty
+    where branch_id = v_branch and product_id = p_product_id
+    returning stock into v_after;
+  if not found then raise exception 'Produk tidak tersedia di cabang'; end if;
+
+  -- HPP global (base_cost_price + cost_price legacy).
+  if p_new_cost is not null then
+    update public.products set base_cost_price = p_new_cost, cost_price = p_new_cost
+      where id = p_product_id;
+  end if;
+  if v_branch = v_main then
+    update public.products set stock = v_after where id = p_product_id;
+  end if;
+
+  insert into public.stock_movements (branch_id, product_id, type, qty_change, stock_after, note, created_by)
+    values (v_branch, p_product_id, 'restock', p_qty, v_after, coalesce(p_note, 'Barang masuk'), v_uid);
+  insert into public.audit_logs (branch_id, actor_id, action, entity, entity_id, metadata)
+    values (v_branch, v_uid, 'stock.restock', 'product', p_product_id, jsonb_build_object('qty', p_qty, 'new_cost', p_new_cost));
+
+  return jsonb_build_object('stock_after', v_after);
+end; $function$
+"
+set_branch_price_stock,"p_branch_id uuid, p_product_id uuid, p_price numeric, p_stock numeric, p_min_stock numeric, p_is_active boolean",plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.set_branch_price_stock(p_branch_id uuid, p_product_id uuid, p_price numeric, p_stock numeric, p_min_stock numeric DEFAULT NULL::numeric, p_is_active boolean DEFAULT NULL::boolean)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_uid uuid := auth.uid();
+  v_main uuid := '00000000-0000-0000-0000-0000000000c1';
+  v_old_stock numeric(14,3);
+  v_delta numeric(14,3);
+begin
+  if v_uid is null then raise exception 'Tidak terautentikasi'; end if;
+  if not public.is_master_admin() then
+    raise exception 'Hanya admin pusat yang dapat mengatur harga & stok cabang';
+  end if;
+  if p_price is null or p_price < 0 then raise exception 'Harga tidak valid'; end if;
+  if p_stock is null or p_stock < 0 then raise exception 'Stok tidak valid'; end if;
+
+  -- Pastikan produk ada & belum dihapus.
+  if not exists (select 1 from public.products where id = p_product_id and deleted_at is null) then
+    raise exception 'Produk tidak ditemukan';
+  end if;
+
+  select stock into v_old_stock from public.branch_products
+    where branch_id = p_branch_id and product_id = p_product_id
+    for update;
+
+  if not found then
+    -- Katalog cabang belum punya baris produk ini (mis. produk khusus cabang lain
+    -- yang kini disediakan pusat) — buat barisnya.
+    insert into public.branch_products (branch_id, product_id, price, min_stock, stock, is_active)
+      values (p_branch_id, p_product_id, p_price, coalesce(p_min_stock, 0), 0, coalesce(p_is_active, true));
+    v_old_stock := 0;
+  end if;
+
+  update public.branch_products set
+    price = p_price,
+    min_stock = coalesce(p_min_stock, min_stock),
+    is_active = coalesce(p_is_active, is_active)
+  where branch_id = p_branch_id and product_id = p_product_id;
+
+  v_delta := p_stock - v_old_stock;
+  if v_delta <> 0 then
+    update public.branch_products set stock = p_stock
+      where branch_id = p_branch_id and product_id = p_product_id;
+    if p_branch_id = v_main then
+      update public.products set stock = p_stock where id = p_product_id;
+    end if;
+    insert into public.stock_movements (branch_id, product_id, type, qty_change, stock_after, note, created_by)
+      values (p_branch_id, p_product_id, 'adjustment', v_delta, p_stock, 'Set stok awal (pusat)', v_uid);
+  end if;
+
+  insert into public.audit_logs (branch_id, actor_id, action, entity, entity_id, metadata)
+    values (p_branch_id, v_uid, 'branch_product.set', 'product', p_product_id,
+            jsonb_build_object('price', p_price, 'stock', p_stock, 'delta', v_delta));
+
+  return jsonb_build_object('ok', true, 'stock', p_stock, 'delta', v_delta, 'price', p_price);
+end;
+$function$
+"
+set_limit,real,c,false,v,"CREATE OR REPLACE FUNCTION public.set_limit(real)
+ RETURNS real
+ LANGUAGE c
+ STRICT
+AS '$libdir/pg_trgm', $function$set_limit$function$
+"
+set_updated_at,,plpgsql,false,v,"CREATE OR REPLACE FUNCTION public.set_updated_at()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$function$
+"
+show_limit,,c,false,s,"CREATE OR REPLACE FUNCTION public.show_limit()
+ RETURNS real
+ LANGUAGE c
+ STABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$show_limit$function$
+"
+show_trgm,text,c,false,i,"CREATE OR REPLACE FUNCTION public.show_trgm(text)
+ RETURNS text[]
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$show_trgm$function$
+"
+similarity,"text, text",c,false,i,"CREATE OR REPLACE FUNCTION public.similarity(text, text)
+ RETURNS real
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$similarity$function$
+"
+similarity_dist,"text, text",c,false,i,"CREATE OR REPLACE FUNCTION public.similarity_dist(text, text)
+ RETURNS real
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$similarity_dist$function$
+"
+similarity_op,"text, text",c,false,s,"CREATE OR REPLACE FUNCTION public.similarity_op(text, text)
+ RETURNS boolean
+ LANGUAGE c
+ STABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$similarity_op$function$
+"
+strict_word_similarity,"text, text",c,false,i,"CREATE OR REPLACE FUNCTION public.strict_word_similarity(text, text)
+ RETURNS real
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$strict_word_similarity$function$
+"
+strict_word_similarity_commutator_op,"text, text",c,false,s,"CREATE OR REPLACE FUNCTION public.strict_word_similarity_commutator_op(text, text)
+ RETURNS boolean
+ LANGUAGE c
+ STABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$strict_word_similarity_commutator_op$function$
+"
+strict_word_similarity_dist_commutator_op,"text, text",c,false,i,"CREATE OR REPLACE FUNCTION public.strict_word_similarity_dist_commutator_op(text, text)
+ RETURNS real
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$strict_word_similarity_dist_commutator_op$function$
+"
+strict_word_similarity_dist_op,"text, text",c,false,i,"CREATE OR REPLACE FUNCTION public.strict_word_similarity_dist_op(text, text)
+ RETURNS real
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$strict_word_similarity_dist_op$function$
+"
+strict_word_similarity_op,"text, text",c,false,s,"CREATE OR REPLACE FUNCTION public.strict_word_similarity_op(text, text)
+ RETURNS boolean
+ LANGUAGE c
+ STABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$strict_word_similarity_op$function$
+"
+sync_branch_products_insert,,plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.sync_branch_products_insert()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  insert into public.branch_products (branch_id, product_id, price, min_stock, stock, is_active)
+  select b.id, new.id, coalesce(new.sell_price, 0), coalesce(new.min_stock, 0),
+         case when b.id = '00000000-0000-0000-0000-0000000000c1' then coalesce(new.stock, 0) else 0 end,
+         coalesce(new.is_active, true)
+  from public.branches b
+  on conflict (branch_id, product_id) do nothing;
+  return new;
+end $function$
+"
+sync_branch_products_update,,plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.sync_branch_products_update()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  -- Harga & stok per cabang TIDAK lagi ditarik dari master (cabang otonom).
+  -- Bila produk katalog dinonaktifkan atau dihapus, matikan di SEMUA cabang.
+  if (new.is_active = false) or (new.deleted_at is not null) then
+    update public.branch_products set is_active = false
+      where product_id = new.id;
+  end if;
+  return new;
+end $function$
+"
+user_branch_ids,,sql,true,s,"CREATE OR REPLACE FUNCTION public.user_branch_ids()
+ RETURNS SETOF uuid
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select branch_id from public.branch_memberships
+  where user_id = auth.uid() and is_active = true;
+$function$
+"
+void_sale,"p_transaction_id uuid, p_reason text",plpgsql,true,v,"CREATE OR REPLACE FUNCTION public.void_sale(p_transaction_id uuid, p_reason text DEFAULT NULL::text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_uid uuid := auth.uid();
+  v_main uuid := '00000000-0000-0000-0000-0000000000c1';
+  v_trx public.transactions%rowtype;
+  v_item record; v_pay record; v_stock_after numeric(14,3);
+begin
+  if v_uid is null then raise exception 'Tidak terautentikasi'; end if;
+  if not (public.is_admin() or public.has_permission('transaction.void')) then
+    raise exception 'Tidak berwenang melakukan void';
+  end if;
+  select * into v_trx from public.transactions where id = p_transaction_id for update;
+  if not found then raise exception 'Transaksi tidak ditemukan'; end if;
+  if v_trx.status <> 'completed' then raise exception 'Hanya transaksi selesai yang bisa di-void'; end if;
+
+  for v_item in
+    select product_id, qty from public.transaction_items
+    where transaction_id = p_transaction_id and product_id is not null
+  loop
+    update public.branch_products set stock = stock + v_item.qty
+      where branch_id = v_trx.branch_id and product_id = v_item.product_id
+      returning stock into v_stock_after;
+    if found then
+      if v_trx.branch_id = v_main then
+        update public.products set stock = v_stock_after where id = v_item.product_id;
+      end if;
+      insert into public.stock_movements (branch_id, product_id, type, qty_change, stock_after, reference_id, note, created_by)
+        values (v_trx.branch_id, v_item.product_id, 'void', v_item.qty, v_stock_after, p_transaction_id, 'Void ' || v_trx.code, v_uid);
+    end if;
+  end loop;
+
+  if v_trx.cash_session_id is not null then
+    for v_pay in select method, amount from public.payments where transaction_id = p_transaction_id
+    loop
+      update public.cash_sessions set
+        total_cash       = total_cash       - case when v_pay.method = 'cash'       then v_pay.amount else 0 end,
+        total_qris       = total_qris       - case when v_pay.method = 'qris'       then v_pay.amount else 0 end,
+        total_transfer   = total_transfer   - case when v_pay.method = 'transfer'   then v_pay.amount else 0 end,
+        total_gofood     = total_gofood     - case when v_pay.method = 'gofood'     then v_pay.amount else 0 end,
+        total_shopeefood = total_shopeefood - case when v_pay.method = 'shopeefood' then v_pay.amount else 0 end,
+        total_grabfood   = total_grabfood   - case when v_pay.method = 'grabfood'   then v_pay.amount else 0 end
+      where id = v_trx.cash_session_id;
+    end loop;
+  end if;
+
+  update public.transactions set
+    status = 'void', voided_by = v_uid, voided_at = now(),
+    note = coalesce(note, '') || case when p_reason is not null then ' | Void: ' || p_reason else ' | Void' end
+  where id = p_transaction_id;
+
+  insert into public.audit_logs (branch_id, actor_id, action, entity, entity_id, metadata)
+  values (v_trx.branch_id, v_uid, 'sale.void', 'transaction', p_transaction_id, jsonb_build_object('code', v_trx.code, 'reason', p_reason));
+  return jsonb_build_object('transaction_id', p_transaction_id, 'status', 'void');
+end; $function$
+"
+word_similarity,"text, text",c,false,i,"CREATE OR REPLACE FUNCTION public.word_similarity(text, text)
+ RETURNS real
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$word_similarity$function$
+"
+word_similarity_commutator_op,"text, text",c,false,s,"CREATE OR REPLACE FUNCTION public.word_similarity_commutator_op(text, text)
+ RETURNS boolean
+ LANGUAGE c
+ STABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$word_similarity_commutator_op$function$
+"
+word_similarity_dist_commutator_op,"text, text",c,false,i,"CREATE OR REPLACE FUNCTION public.word_similarity_dist_commutator_op(text, text)
+ RETURNS real
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$word_similarity_dist_commutator_op$function$
+"
+word_similarity_dist_op,"text, text",c,false,i,"CREATE OR REPLACE FUNCTION public.word_similarity_dist_op(text, text)
+ RETURNS real
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$word_similarity_dist_op$function$
+"
+word_similarity_op,"text, text",c,false,s,"CREATE OR REPLACE FUNCTION public.word_similarity_op(text, text)
+ RETURNS boolean
+ LANGUAGE c
+ STABLE PARALLEL SAFE STRICT
+AS '$libdir/pg_trgm', $function$word_similarity_op$function$
+"

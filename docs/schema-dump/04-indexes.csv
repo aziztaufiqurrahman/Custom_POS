@@ -1,0 +1,75 @@
+tablename,indexname,indexdef
+approvals,approvals_pkey,CREATE UNIQUE INDEX approvals_pkey ON public.approvals USING btree (id)
+approvals,idx_approvals_branch_status,"CREATE INDEX idx_approvals_branch_status ON public.approvals USING btree (branch_id, status)"
+audit_logs,audit_logs_pkey,CREATE UNIQUE INDEX audit_logs_pkey ON public.audit_logs USING btree (id)
+audit_logs,idx_audit_actor,"CREATE INDEX idx_audit_actor ON public.audit_logs USING btree (actor_id, created_at DESC)"
+audit_logs,idx_audit_entity,"CREATE INDEX idx_audit_entity ON public.audit_logs USING btree (entity, entity_id)"
+bank_accounts,bank_accounts_pkey,CREATE UNIQUE INDEX bank_accounts_pkey ON public.bank_accounts USING btree (id)
+bank_accounts,uq_bank_branch_bank,"CREATE UNIQUE INDEX uq_bank_branch_bank ON public.bank_accounts USING btree (branch_id, bank)"
+branch_memberships,branch_memberships_pkey,CREATE UNIQUE INDEX branch_memberships_pkey ON public.branch_memberships USING btree (id)
+branch_memberships,branch_memberships_user_id_branch_id_key,"CREATE UNIQUE INDEX branch_memberships_user_id_branch_id_key ON public.branch_memberships USING btree (user_id, branch_id)"
+branch_memberships,idx_memberships_branch,CREATE INDEX idx_memberships_branch ON public.branch_memberships USING btree (branch_id) WHERE is_active
+branch_memberships,idx_memberships_user,CREATE INDEX idx_memberships_user ON public.branch_memberships USING btree (user_id) WHERE is_active
+branch_products,branch_products_branch_id_product_id_key,"CREATE UNIQUE INDEX branch_products_branch_id_product_id_key ON public.branch_products USING btree (branch_id, product_id)"
+branch_products,branch_products_pkey,CREATE UNIQUE INDEX branch_products_pkey ON public.branch_products USING btree (id)
+branch_products,idx_branch_products_branch,CREATE INDEX idx_branch_products_branch ON public.branch_products USING btree (branch_id)
+branch_settings,branch_settings_branch_id_key,CREATE UNIQUE INDEX branch_settings_branch_id_key ON public.branch_settings USING btree (branch_id)
+branch_settings,branch_settings_pkey,CREATE UNIQUE INDEX branch_settings_pkey ON public.branch_settings USING btree (id)
+branches,branches_code_key,CREATE UNIQUE INDEX branches_code_key ON public.branches USING btree (code)
+branches,branches_pkey,CREATE UNIQUE INDEX branches_pkey ON public.branches USING btree (id)
+cash_expenses,cash_expenses_pkey,CREATE UNIQUE INDEX cash_expenses_pkey ON public.cash_expenses USING btree (id)
+cash_expenses,idx_cash_expenses_created,CREATE INDEX idx_cash_expenses_created ON public.cash_expenses USING btree (created_at)
+cash_expenses,idx_cash_expenses_session,CREATE INDEX idx_cash_expenses_session ON public.cash_expenses USING btree (cash_session_id)
+cash_movements,cash_movements_pkey,CREATE UNIQUE INDEX cash_movements_pkey ON public.cash_movements USING btree (id)
+cash_movements,idx_cash_movements_session,CREATE INDEX idx_cash_movements_session ON public.cash_movements USING btree (cash_session_id)
+cash_sessions,cash_sessions_pkey,CREATE UNIQUE INDEX cash_sessions_pkey ON public.cash_sessions USING btree (id)
+cash_sessions,idx_sessions_cashier,"CREATE INDEX idx_sessions_cashier ON public.cash_sessions USING btree (cashier_id, opened_at DESC)"
+cash_sessions,uq_one_open_session_per_cashier,CREATE UNIQUE INDEX uq_one_open_session_per_cashier ON public.cash_sessions USING btree (cashier_id) WHERE (status = 'open'::session_status)
+categories,categories_pkey,CREATE UNIQUE INDEX categories_pkey ON public.categories USING btree (id)
+categories,idx_categories_parent,CREATE INDEX idx_categories_parent ON public.categories USING btree (parent_id)
+daily_closures,daily_closures_branch_id_business_date_key,"CREATE UNIQUE INDEX daily_closures_branch_id_business_date_key ON public.daily_closures USING btree (branch_id, business_date)"
+daily_closures,daily_closures_pkey,CREATE UNIQUE INDEX daily_closures_pkey ON public.daily_closures USING btree (id)
+goods_receipt_items,goods_receipt_items_pkey,CREATE UNIQUE INDEX goods_receipt_items_pkey ON public.goods_receipt_items USING btree (id)
+goods_receipts,goods_receipts_pkey,CREATE UNIQUE INDEX goods_receipts_pkey ON public.goods_receipts USING btree (id)
+goods_receipts,uq_goods_receipts_branch_code,"CREATE UNIQUE INDEX uq_goods_receipts_branch_code ON public.goods_receipts USING btree (branch_id, code)"
+notifications,idx_notifications_user_created,"CREATE INDEX idx_notifications_user_created ON public.notifications USING btree (user_id, created_at DESC)"
+notifications,notifications_pkey,CREATE UNIQUE INDEX notifications_pkey ON public.notifications USING btree (id)
+org_settings,org_settings_pkey,CREATE UNIQUE INDEX org_settings_pkey ON public.org_settings USING btree (id)
+payments,idx_payments_method,CREATE INDEX idx_payments_method ON public.payments USING btree (method)
+payments,idx_payments_trx,CREATE INDEX idx_payments_trx ON public.payments USING btree (transaction_id)
+payments,payments_pkey,CREATE UNIQUE INDEX payments_pkey ON public.payments USING btree (id)
+products,idx_products_category,CREATE INDEX idx_products_category ON public.products USING btree (category_id)
+products,idx_products_name_trgm,CREATE INDEX idx_products_name_trgm ON public.products USING gin (name gin_trgm_ops)
+products,idx_products_sku_trgm,CREATE INDEX idx_products_sku_trgm ON public.products USING gin (sku gin_trgm_ops)
+products,products_pkey,CREATE UNIQUE INDEX products_pkey ON public.products USING btree (id)
+products,uq_products_barcode_active,CREATE UNIQUE INDEX uq_products_barcode_active ON public.products USING btree (barcode) WHERE ((deleted_at IS NULL) AND (barcode IS NOT NULL))
+products,uq_products_sku_active,CREATE UNIQUE INDEX uq_products_sku_active ON public.products USING btree (sku) WHERE (deleted_at IS NULL)
+profiles,profiles_pkey,CREATE UNIQUE INDEX profiles_pkey ON public.profiles USING btree (id)
+stock_movements,idx_movements_product,"CREATE INDEX idx_movements_product ON public.stock_movements USING btree (product_id, created_at DESC)"
+stock_movements,idx_movements_reference,CREATE INDEX idx_movements_reference ON public.stock_movements USING btree (reference_id)
+stock_movements,idx_movements_type,CREATE INDEX idx_movements_type ON public.stock_movements USING btree (type)
+stock_movements,idx_stock_movements_branch,CREATE INDEX idx_stock_movements_branch ON public.stock_movements USING btree (branch_id)
+stock_movements,stock_movements_pkey,CREATE UNIQUE INDEX stock_movements_pkey ON public.stock_movements USING btree (id)
+stock_opname_items,idx_opname_items_opname,CREATE INDEX idx_opname_items_opname ON public.stock_opname_items USING btree (opname_id)
+stock_opname_items,stock_opname_items_pkey,CREATE UNIQUE INDEX stock_opname_items_pkey ON public.stock_opname_items USING btree (id)
+stock_opnames,stock_opnames_code_key,CREATE UNIQUE INDEX stock_opnames_code_key ON public.stock_opnames USING btree (code)
+stock_opnames,stock_opnames_pkey,CREATE UNIQUE INDEX stock_opnames_pkey ON public.stock_opnames USING btree (id)
+stock_transfer_items,stock_transfer_items_pkey,CREATE UNIQUE INDEX stock_transfer_items_pkey ON public.stock_transfer_items USING btree (id)
+stock_transfers,stock_transfers_code_key,CREATE UNIQUE INDEX stock_transfers_code_key ON public.stock_transfers USING btree (code)
+stock_transfers,stock_transfers_pkey,CREATE UNIQUE INDEX stock_transfers_pkey ON public.stock_transfers USING btree (id)
+store_settings,store_settings_pkey,CREATE UNIQUE INDEX store_settings_pkey ON public.store_settings USING btree (id)
+suppliers,suppliers_pkey,CREATE UNIQUE INDEX suppliers_pkey ON public.suppliers USING btree (id)
+transaction_items,idx_trx_items_product,CREATE INDEX idx_trx_items_product ON public.transaction_items USING btree (product_id)
+transaction_items,idx_trx_items_trx,CREATE INDEX idx_trx_items_trx ON public.transaction_items USING btree (transaction_id)
+transaction_items,transaction_items_pkey,CREATE UNIQUE INDEX transaction_items_pkey ON public.transaction_items USING btree (id)
+transactions,idx_transactions_branch,CREATE INDEX idx_transactions_branch ON public.transactions USING btree (branch_id)
+transactions,idx_transactions_branch_seq,"CREATE INDEX idx_transactions_branch_seq ON public.transactions USING btree (branch_id, seq_no)"
+transactions,idx_transactions_cashier,"CREATE INDEX idx_transactions_cashier ON public.transactions USING btree (cashier_id, created_at DESC)"
+transactions,idx_transactions_created,CREATE INDEX idx_transactions_created ON public.transactions USING btree (created_at DESC)
+transactions,idx_transactions_session,CREATE INDEX idx_transactions_session ON public.transactions USING btree (cash_session_id)
+transactions,idx_transactions_status,CREATE INDEX idx_transactions_status ON public.transactions USING btree (status)
+transactions,transactions_pkey,CREATE UNIQUE INDEX transactions_pkey ON public.transactions USING btree (id)
+transactions,uq_transactions_branch_code,"CREATE UNIQUE INDEX uq_transactions_branch_code ON public.transactions USING btree (branch_id, code)"
+wastage_items,wastage_items_pkey,CREATE UNIQUE INDEX wastage_items_pkey ON public.wastage_items USING btree (id)
+wastages,uq_wastages_branch_code,"CREATE UNIQUE INDEX uq_wastages_branch_code ON public.wastages USING btree (branch_id, code)"
+wastages,wastages_pkey,CREATE UNIQUE INDEX wastages_pkey ON public.wastages USING btree (id)

@@ -1,0 +1,305 @@
+table_name,ordinal_position,column_name,data_type,numeric_precision,numeric_scale,is_nullable,column_default
+approvals,1,id,uuid,null,null,NO,gen_random_uuid()
+approvals,2,branch_id,uuid,null,null,NO,null
+approvals,3,request_type,USER-DEFINED,null,null,NO,null
+approvals,4,reference_type,text,null,null,YES,null
+approvals,5,reference_id,uuid,null,null,YES,null
+approvals,6,requested_by,uuid,null,null,YES,null
+approvals,7,approved_by,uuid,null,null,YES,null
+approvals,8,status,USER-DEFINED,null,null,NO,'pending'::approval_status
+approvals,9,reason,text,null,null,YES,null
+approvals,10,created_at,timestamp with time zone,null,null,NO,now()
+approvals,11,decided_at,timestamp with time zone,null,null,YES,null
+approvals,12,payload,jsonb,null,null,YES,null
+audit_logs,1,id,uuid,null,null,NO,gen_random_uuid()
+audit_logs,2,actor_id,uuid,null,null,YES,null
+audit_logs,3,action,text,null,null,NO,null
+audit_logs,4,entity,text,null,null,YES,null
+audit_logs,5,entity_id,uuid,null,null,YES,null
+audit_logs,6,metadata,jsonb,null,null,YES,null
+audit_logs,7,created_at,timestamp with time zone,null,null,NO,now()
+audit_logs,8,branch_id,uuid,null,null,YES,null
+audit_logs,9,prev_hash,text,null,null,YES,null
+audit_logs,10,row_hash,text,null,null,YES,null
+bank_accounts,1,id,uuid,null,null,NO,gen_random_uuid()
+bank_accounts,2,bank,text,null,null,NO,null
+bank_accounts,3,account_number,text,null,null,NO,''::text
+bank_accounts,4,account_name,text,null,null,NO,''::text
+bank_accounts,5,is_active,boolean,null,null,NO,true
+bank_accounts,6,created_at,timestamp with time zone,null,null,NO,now()
+bank_accounts,7,updated_at,timestamp with time zone,null,null,NO,now()
+bank_accounts,8,branch_id,uuid,null,null,NO,'00000000-0000-0000-0000-0000000000c1'::uuid
+branch_memberships,1,id,uuid,null,null,NO,gen_random_uuid()
+branch_memberships,2,user_id,uuid,null,null,NO,null
+branch_memberships,3,branch_id,uuid,null,null,NO,null
+branch_memberships,4,role,USER-DEFINED,null,null,NO,null
+branch_memberships,5,permissions,ARRAY,null,null,NO,'{}'::text[]
+branch_memberships,6,is_active,boolean,null,null,NO,true
+branch_memberships,7,created_at,timestamp with time zone,null,null,NO,now()
+branch_memberships,8,updated_at,timestamp with time zone,null,null,NO,now()
+branch_products,1,id,uuid,null,null,NO,gen_random_uuid()
+branch_products,2,branch_id,uuid,null,null,NO,null
+branch_products,3,product_id,uuid,null,null,NO,null
+branch_products,4,price,numeric,14,2,NO,0
+branch_products,5,min_stock,numeric,14,3,NO,0
+branch_products,6,stock,numeric,14,3,NO,0
+branch_products,7,is_active,boolean,null,null,NO,true
+branch_products,8,created_at,timestamp with time zone,null,null,NO,now()
+branch_products,9,updated_at,timestamp with time zone,null,null,NO,now()
+branch_settings,1,id,uuid,null,null,NO,gen_random_uuid()
+branch_settings,2,branch_id,uuid,null,null,NO,null
+branch_settings,3,tax_enabled,boolean,null,null,NO,false
+branch_settings,4,tax_percent,numeric,5,2,NO,0
+branch_settings,5,tax_inclusive,boolean,null,null,NO,false
+branch_settings,6,receipt_footer,text,null,null,YES,null
+branch_settings,7,qris_image_url,text,null,null,YES,null
+branch_settings,8,trx_prefix,text,null,null,NO,'TRX'::text
+branch_settings,9,theme_preset,text,null,null,NO,'classic'::text
+branch_settings,10,theme_primary,text,null,null,YES,null
+branch_settings,11,theme_radius,text,null,null,NO,'md'::text
+branch_settings,12,theme_font,text,null,null,NO,'default'::text
+branch_settings,13,created_at,timestamp with time zone,null,null,NO,now()
+branch_settings,14,updated_at,timestamp with time zone,null,null,NO,now()
+branches,1,id,uuid,null,null,NO,gen_random_uuid()
+branches,2,code,text,null,null,NO,null
+branches,3,name,text,null,null,NO,null
+branches,4,address,text,null,null,YES,null
+branches,5,phone,text,null,null,YES,null
+branches,6,timezone,text,null,null,NO,'Asia/Jakarta'::text
+branches,7,is_active,boolean,null,null,NO,true
+branches,8,created_at,timestamp with time zone,null,null,NO,now()
+branches,9,updated_at,timestamp with time zone,null,null,NO,now()
+cash_expenses,1,id,uuid,null,null,NO,gen_random_uuid()
+cash_expenses,2,cash_session_id,uuid,null,null,NO,null
+cash_expenses,3,amount,numeric,14,2,NO,null
+cash_expenses,4,category,text,null,null,NO,'lainnya'::text
+cash_expenses,5,note,text,null,null,YES,null
+cash_expenses,6,created_by,uuid,null,null,YES,null
+cash_expenses,7,created_at,timestamp with time zone,null,null,NO,now()
+cash_expenses,8,source,text,null,null,NO,'cash'::text
+cash_expenses,9,branch_id,uuid,null,null,NO,'00000000-0000-0000-0000-0000000000c1'::uuid
+cash_movements,1,id,uuid,null,null,NO,gen_random_uuid()
+cash_movements,2,branch_id,uuid,null,null,NO,null
+cash_movements,3,cash_session_id,uuid,null,null,YES,null
+cash_movements,4,type,USER-DEFINED,null,null,NO,null
+cash_movements,5,amount,numeric,14,2,NO,null
+cash_movements,6,reason,text,null,null,YES,null
+cash_movements,7,receipt_url,text,null,null,YES,null
+cash_movements,8,created_by,uuid,null,null,YES,null
+cash_movements,9,approved_by,uuid,null,null,YES,null
+cash_movements,10,created_at,timestamp with time zone,null,null,NO,now()
+cash_sessions,1,id,uuid,null,null,NO,gen_random_uuid()
+cash_sessions,2,cashier_id,uuid,null,null,NO,null
+cash_sessions,3,opening_balance,numeric,14,2,NO,0
+cash_sessions,4,status,USER-DEFINED,null,null,NO,'open'::session_status
+cash_sessions,5,opened_at,timestamp with time zone,null,null,NO,now()
+cash_sessions,6,closed_at,timestamp with time zone,null,null,YES,null
+cash_sessions,7,expected_cash,numeric,14,2,YES,null
+cash_sessions,8,counted_cash,numeric,14,2,YES,null
+cash_sessions,9,variance,numeric,14,2,YES,null
+cash_sessions,10,total_cash,numeric,14,2,NO,0
+cash_sessions,11,total_qris,numeric,14,2,NO,0
+cash_sessions,12,total_transfer,numeric,14,2,NO,0
+cash_sessions,13,note,text,null,null,YES,null
+cash_sessions,14,created_at,timestamp with time zone,null,null,NO,now()
+cash_sessions,15,updated_at,timestamp with time zone,null,null,NO,now()
+cash_sessions,16,total_gofood,numeric,14,2,NO,0
+cash_sessions,17,total_shopeefood,numeric,14,2,NO,0
+cash_sessions,18,total_expenses,numeric,14,2,NO,0
+cash_sessions,19,branch_id,uuid,null,null,NO,'00000000-0000-0000-0000-0000000000c1'::uuid
+cash_sessions,20,total_grabfood,numeric,14,2,NO,0
+categories,1,id,uuid,null,null,NO,gen_random_uuid()
+categories,2,name,text,null,null,NO,null
+categories,3,parent_id,uuid,null,null,YES,null
+categories,4,created_at,timestamp with time zone,null,null,NO,now()
+daily_closures,1,id,uuid,null,null,NO,gen_random_uuid()
+daily_closures,2,branch_id,uuid,null,null,NO,null
+daily_closures,3,business_date,date,null,null,NO,null
+daily_closures,4,totals,jsonb,null,null,NO,'{}'::jsonb
+daily_closures,5,closed_by,uuid,null,null,YES,null
+daily_closures,6,closed_at,timestamp with time zone,null,null,NO,now()
+daily_closures,7,is_locked,boolean,null,null,NO,true
+goods_receipt_items,1,id,uuid,null,null,NO,gen_random_uuid()
+goods_receipt_items,2,receipt_id,uuid,null,null,NO,null
+goods_receipt_items,3,product_id,uuid,null,null,NO,null
+goods_receipt_items,4,qty,numeric,14,3,NO,null
+goods_receipt_items,5,cost_price,numeric,14,2,YES,null
+goods_receipts,1,id,uuid,null,null,NO,gen_random_uuid()
+goods_receipts,2,branch_id,uuid,null,null,NO,null
+goods_receipts,3,code,text,null,null,NO,null
+goods_receipts,4,supplier_id,uuid,null,null,YES,null
+goods_receipts,5,status,USER-DEFINED,null,null,NO,'draft'::goods_receipt_status
+goods_receipts,6,received_by,uuid,null,null,YES,null
+goods_receipts,7,received_at,timestamp with time zone,null,null,YES,null
+goods_receipts,8,note,text,null,null,YES,null
+goods_receipts,9,created_at,timestamp with time zone,null,null,NO,now()
+goods_receipts,10,updated_at,timestamp with time zone,null,null,NO,now()
+notifications,1,id,uuid,null,null,NO,gen_random_uuid()
+notifications,2,user_id,uuid,null,null,NO,null
+notifications,3,type,text,null,null,NO,'info'::text
+notifications,4,title,text,null,null,NO,null
+notifications,5,body,text,null,null,YES,null
+notifications,6,link,text,null,null,YES,null
+notifications,7,read_at,timestamp with time zone,null,null,YES,null
+notifications,8,created_at,timestamp with time zone,null,null,NO,now()
+org_settings,1,id,uuid,null,null,NO,gen_random_uuid()
+org_settings,2,org_name,text,null,null,NO,'Organisasi'::text
+org_settings,3,logo_url,text,null,null,YES,null
+org_settings,4,default_discount_threshold,numeric,14,2,NO,0
+org_settings,5,default_adjustment_threshold,numeric,14,3,NO,0
+org_settings,6,created_at,timestamp with time zone,null,null,NO,now()
+org_settings,7,updated_at,timestamp with time zone,null,null,NO,now()
+org_settings,8,alert_whatsapp,text,null,null,YES,null
+payments,1,id,uuid,null,null,NO,gen_random_uuid()
+payments,2,transaction_id,uuid,null,null,NO,null
+payments,3,method,USER-DEFINED,null,null,NO,null
+payments,4,bank,text,null,null,YES,null
+payments,5,amount,numeric,14,2,NO,null
+payments,6,cash_received,numeric,14,2,YES,null
+payments,7,change_given,numeric,14,2,YES,null
+payments,8,reference,text,null,null,YES,null
+payments,9,created_at,timestamp with time zone,null,null,NO,now()
+payments,10,branch_id,uuid,null,null,NO,'00000000-0000-0000-0000-0000000000c1'::uuid
+products,1,id,uuid,null,null,NO,gen_random_uuid()
+products,2,sku,text,null,null,NO,null
+products,3,barcode,text,null,null,YES,null
+products,4,name,text,null,null,NO,null
+products,5,description,text,null,null,YES,null
+products,6,category_id,uuid,null,null,YES,null
+products,7,image_url,text,null,null,YES,null
+products,8,image_urls,ARRAY,null,null,NO,'{}'::text[]
+products,9,sell_price,numeric,14,2,NO,0
+products,10,cost_price,numeric,14,2,YES,null
+products,11,unit,text,null,null,NO,'pcs'::text
+products,12,stock,numeric,14,3,NO,0
+products,13,min_stock,numeric,14,3,NO,0
+products,14,is_taxable,boolean,null,null,NO,false
+products,15,discount_type,USER-DEFINED,null,null,NO,'none'::discount_type
+products,16,discount_value,numeric,14,2,NO,0
+products,17,supplier,text,null,null,YES,null
+products,18,is_active,boolean,null,null,NO,true
+products,19,deleted_at,timestamp with time zone,null,null,YES,null
+products,20,created_at,timestamp with time zone,null,null,NO,now()
+products,21,updated_at,timestamp with time zone,null,null,NO,now()
+products,22,base_cost_price,numeric,14,2,YES,null
+profiles,1,id,uuid,null,null,NO,null
+profiles,2,full_name,text,null,null,NO,''::text
+profiles,3,phone,text,null,null,YES,null
+profiles,4,avatar_url,text,null,null,YES,null
+profiles,5,role,USER-DEFINED,null,null,NO,'kasir'::user_role
+profiles,6,permissions,ARRAY,null,null,NO,'{}'::text[]
+profiles,7,is_active,boolean,null,null,NO,true
+profiles,8,created_at,timestamp with time zone,null,null,NO,now()
+profiles,9,updated_at,timestamp with time zone,null,null,NO,now()
+profiles,10,is_master_admin,boolean,null,null,NO,false
+stock_movements,1,id,uuid,null,null,NO,gen_random_uuid()
+stock_movements,2,product_id,uuid,null,null,NO,null
+stock_movements,3,type,USER-DEFINED,null,null,NO,null
+stock_movements,4,qty_change,numeric,14,3,NO,null
+stock_movements,5,stock_after,numeric,14,3,NO,null
+stock_movements,6,reference_id,uuid,null,null,YES,null
+stock_movements,7,note,text,null,null,YES,null
+stock_movements,8,created_by,uuid,null,null,YES,null
+stock_movements,9,created_at,timestamp with time zone,null,null,NO,now()
+stock_movements,10,branch_id,uuid,null,null,NO,'00000000-0000-0000-0000-0000000000c1'::uuid
+stock_movements,11,prev_hash,text,null,null,YES,null
+stock_movements,12,row_hash,text,null,null,YES,null
+stock_opname_items,1,id,uuid,null,null,NO,gen_random_uuid()
+stock_opname_items,2,opname_id,uuid,null,null,NO,null
+stock_opname_items,3,product_id,uuid,null,null,NO,null
+stock_opname_items,4,system_qty,numeric,14,3,NO,0
+stock_opname_items,5,physical_qty,numeric,14,3,NO,0
+stock_opname_items,6,difference,numeric,14,3,NO,0
+stock_opname_items,7,reason,text,null,null,YES,null
+stock_opnames,1,id,uuid,null,null,NO,gen_random_uuid()
+stock_opnames,2,code,text,null,null,NO,null
+stock_opnames,3,status,USER-DEFINED,null,null,NO,'draft'::opname_status
+stock_opnames,4,created_by,uuid,null,null,YES,null
+stock_opnames,5,completed_at,timestamp with time zone,null,null,YES,null
+stock_opnames,6,note,text,null,null,YES,null
+stock_opnames,7,created_at,timestamp with time zone,null,null,NO,now()
+stock_opnames,8,branch_id,uuid,null,null,NO,'00000000-0000-0000-0000-0000000000c1'::uuid
+stock_transfer_items,1,id,uuid,null,null,NO,gen_random_uuid()
+stock_transfer_items,2,transfer_id,uuid,null,null,NO,null
+stock_transfer_items,3,product_id,uuid,null,null,NO,null
+stock_transfer_items,4,qty,numeric,14,3,NO,null
+stock_transfers,1,id,uuid,null,null,NO,gen_random_uuid()
+stock_transfers,2,code,text,null,null,NO,null
+stock_transfers,3,from_branch_id,uuid,null,null,NO,null
+stock_transfers,4,to_branch_id,uuid,null,null,NO,null
+stock_transfers,5,status,USER-DEFINED,null,null,NO,'draft'::transfer_status
+stock_transfers,6,created_by,uuid,null,null,YES,null
+stock_transfers,7,dispatched_by,uuid,null,null,YES,null
+stock_transfers,8,received_by,uuid,null,null,YES,null
+stock_transfers,9,dispatched_at,timestamp with time zone,null,null,YES,null
+stock_transfers,10,received_at,timestamp with time zone,null,null,YES,null
+stock_transfers,11,note,text,null,null,YES,null
+stock_transfers,12,created_at,timestamp with time zone,null,null,NO,now()
+stock_transfers,13,updated_at,timestamp with time zone,null,null,NO,now()
+store_settings,1,id,uuid,null,null,NO,gen_random_uuid()
+store_settings,2,store_name,text,null,null,NO,'Toko Saya'::text
+store_settings,3,logo_url,text,null,null,YES,null
+store_settings,4,address,text,null,null,YES,null
+store_settings,5,phone,text,null,null,YES,null
+store_settings,6,receipt_footer,text,null,null,YES,null
+store_settings,7,qris_image_url,text,null,null,YES,null
+store_settings,8,tax_enabled,boolean,null,null,NO,false
+store_settings,9,tax_percent,numeric,5,2,NO,11
+store_settings,10,tax_inclusive,boolean,null,null,NO,false
+store_settings,11,trx_prefix,text,null,null,NO,'TRX'::text
+store_settings,12,updated_at,timestamp with time zone,null,null,NO,now()
+store_settings,13,theme_preset,text,null,null,NO,'classic'::text
+store_settings,14,theme_primary,text,null,null,YES,null
+store_settings,15,theme_radius,text,null,null,NO,'md'::text
+store_settings,16,theme_font,text,null,null,NO,'default'::text
+suppliers,1,id,uuid,null,null,NO,gen_random_uuid()
+suppliers,2,name,text,null,null,NO,null
+suppliers,3,phone,text,null,null,YES,null
+suppliers,4,note,text,null,null,YES,null
+suppliers,5,is_active,boolean,null,null,NO,true
+suppliers,6,created_at,timestamp with time zone,null,null,NO,now()
+suppliers,7,updated_at,timestamp with time zone,null,null,NO,now()
+transaction_items,1,id,uuid,null,null,NO,gen_random_uuid()
+transaction_items,2,transaction_id,uuid,null,null,NO,null
+transaction_items,3,product_id,uuid,null,null,YES,null
+transaction_items,4,product_name_snapshot,text,null,null,NO,null
+transaction_items,5,sku_snapshot,text,null,null,YES,null
+transaction_items,6,unit_price,numeric,14,2,NO,null
+transaction_items,7,qty,numeric,14,3,NO,null
+transaction_items,8,discount,numeric,14,2,NO,0
+transaction_items,9,line_total,numeric,14,2,NO,null
+transactions,1,id,uuid,null,null,NO,gen_random_uuid()
+transactions,2,code,text,null,null,NO,null
+transactions,3,cashier_id,uuid,null,null,NO,null
+transactions,4,cash_session_id,uuid,null,null,YES,null
+transactions,5,customer_name,text,null,null,YES,null
+transactions,6,customer_phone,text,null,null,YES,null
+transactions,7,subtotal,numeric,14,2,NO,0
+transactions,8,discount_total,numeric,14,2,NO,0
+transactions,9,tax_total,numeric,14,2,NO,0
+transactions,10,grand_total,numeric,14,2,NO,0
+transactions,11,status,USER-DEFINED,null,null,NO,'completed'::transaction_status
+transactions,12,note,text,null,null,YES,null
+transactions,13,voided_by,uuid,null,null,YES,null
+transactions,14,voided_at,timestamp with time zone,null,null,YES,null
+transactions,15,created_at,timestamp with time zone,null,null,NO,now()
+transactions,16,shipping_cost,numeric,14,2,NO,0
+transactions,17,branch_id,uuid,null,null,NO,'00000000-0000-0000-0000-0000000000c1'::uuid
+transactions,18,seq_no,bigint,64,0,YES,null
+transactions,19,reversal_of,uuid,null,null,YES,null
+transactions,20,prev_hash,text,null,null,YES,null
+transactions,21,row_hash,text,null,null,YES,null
+wastage_items,1,id,uuid,null,null,NO,gen_random_uuid()
+wastage_items,2,wastage_id,uuid,null,null,NO,null
+wastage_items,3,product_id,uuid,null,null,NO,null
+wastage_items,4,qty,numeric,14,3,NO,null
+wastages,1,id,uuid,null,null,NO,gen_random_uuid()
+wastages,2,branch_id,uuid,null,null,NO,null
+wastages,3,code,text,null,null,NO,null
+wastages,4,status,USER-DEFINED,null,null,NO,'pending_approval'::wastage_status
+wastages,5,reason,text,null,null,YES,null
+wastages,6,photo_url,text,null,null,YES,null
+wastages,7,created_by,uuid,null,null,YES,null
+wastages,8,approved_by,uuid,null,null,YES,null
+wastages,9,created_at,timestamp with time zone,null,null,NO,now()
+wastages,10,updated_at,timestamp with time zone,null,null,NO,now()

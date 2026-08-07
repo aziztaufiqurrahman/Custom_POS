@@ -1,0 +1,100 @@
+tabel,nama_constraint,jenis,definisi
+approvals,approvals_approved_by_fkey,FOREIGN KEY,FOREIGN KEY (approved_by) REFERENCES profiles(id) ON DELETE SET NULL
+approvals,approvals_branch_id_fkey,FOREIGN KEY,FOREIGN KEY (branch_id) REFERENCES branches(id)
+approvals,approvals_requested_by_fkey,FOREIGN KEY,FOREIGN KEY (requested_by) REFERENCES profiles(id) ON DELETE SET NULL
+approvals,approvals_pkey,PRIMARY KEY,PRIMARY KEY (id)
+audit_logs,audit_logs_actor_id_fkey,FOREIGN KEY,FOREIGN KEY (actor_id) REFERENCES profiles(id) ON DELETE SET NULL
+audit_logs,audit_logs_branch_id_fkey,FOREIGN KEY,FOREIGN KEY (branch_id) REFERENCES branches(id)
+audit_logs,audit_logs_pkey,PRIMARY KEY,PRIMARY KEY (id)
+bank_accounts,bank_accounts_branch_id_fkey,FOREIGN KEY,FOREIGN KEY (branch_id) REFERENCES branches(id)
+bank_accounts,bank_accounts_pkey,PRIMARY KEY,PRIMARY KEY (id)
+branch_memberships,branch_memberships_branch_id_fkey,FOREIGN KEY,FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE
+branch_memberships,branch_memberships_user_id_fkey,FOREIGN KEY,FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+branch_memberships,branch_memberships_pkey,PRIMARY KEY,PRIMARY KEY (id)
+branch_memberships,branch_memberships_user_id_branch_id_key,UNIQUE,"UNIQUE (user_id, branch_id)"
+branch_products,branch_products_branch_id_fkey,FOREIGN KEY,FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE
+branch_products,branch_products_product_id_fkey,FOREIGN KEY,FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+branch_products,branch_products_pkey,PRIMARY KEY,PRIMARY KEY (id)
+branch_products,branch_products_branch_id_product_id_key,UNIQUE,"UNIQUE (branch_id, product_id)"
+branch_settings,branch_settings_branch_id_fkey,FOREIGN KEY,FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE
+branch_settings,branch_settings_pkey,PRIMARY KEY,PRIMARY KEY (id)
+branch_settings,branch_settings_branch_id_key,UNIQUE,UNIQUE (branch_id)
+branches,branches_pkey,PRIMARY KEY,PRIMARY KEY (id)
+branches,branches_code_key,UNIQUE,UNIQUE (code)
+cash_expenses,cash_expenses_amount_check,CHECK,CHECK ((amount > (0)::numeric))
+cash_expenses,cash_expenses_branch_id_fkey,FOREIGN KEY,FOREIGN KEY (branch_id) REFERENCES branches(id)
+cash_expenses,cash_expenses_cash_session_id_fkey,FOREIGN KEY,FOREIGN KEY (cash_session_id) REFERENCES cash_sessions(id) ON DELETE CASCADE
+cash_expenses,cash_expenses_created_by_fkey,FOREIGN KEY,FOREIGN KEY (created_by) REFERENCES profiles(id)
+cash_expenses,cash_expenses_pkey,PRIMARY KEY,PRIMARY KEY (id)
+cash_movements,cash_movements_approved_by_fkey,FOREIGN KEY,FOREIGN KEY (approved_by) REFERENCES profiles(id) ON DELETE SET NULL
+cash_movements,cash_movements_branch_id_fkey,FOREIGN KEY,FOREIGN KEY (branch_id) REFERENCES branches(id)
+cash_movements,cash_movements_cash_session_id_fkey,FOREIGN KEY,FOREIGN KEY (cash_session_id) REFERENCES cash_sessions(id) ON DELETE CASCADE
+cash_movements,cash_movements_created_by_fkey,FOREIGN KEY,FOREIGN KEY (created_by) REFERENCES profiles(id) ON DELETE SET NULL
+cash_movements,cash_movements_pkey,PRIMARY KEY,PRIMARY KEY (id)
+cash_sessions,cash_sessions_branch_id_fkey,FOREIGN KEY,FOREIGN KEY (branch_id) REFERENCES branches(id)
+cash_sessions,cash_sessions_cashier_id_fkey,FOREIGN KEY,FOREIGN KEY (cashier_id) REFERENCES profiles(id)
+cash_sessions,cash_sessions_pkey,PRIMARY KEY,PRIMARY KEY (id)
+categories,categories_parent_id_fkey,FOREIGN KEY,FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE SET NULL
+categories,categories_pkey,PRIMARY KEY,PRIMARY KEY (id)
+daily_closures,daily_closures_branch_id_fkey,FOREIGN KEY,FOREIGN KEY (branch_id) REFERENCES branches(id)
+daily_closures,daily_closures_closed_by_fkey,FOREIGN KEY,FOREIGN KEY (closed_by) REFERENCES profiles(id) ON DELETE SET NULL
+daily_closures,daily_closures_pkey,PRIMARY KEY,PRIMARY KEY (id)
+daily_closures,daily_closures_branch_id_business_date_key,UNIQUE,"UNIQUE (branch_id, business_date)"
+goods_receipt_items,goods_receipt_items_product_id_fkey,FOREIGN KEY,FOREIGN KEY (product_id) REFERENCES products(id)
+goods_receipt_items,goods_receipt_items_receipt_id_fkey,FOREIGN KEY,FOREIGN KEY (receipt_id) REFERENCES goods_receipts(id) ON DELETE CASCADE
+goods_receipt_items,goods_receipt_items_pkey,PRIMARY KEY,PRIMARY KEY (id)
+goods_receipts,goods_receipts_branch_id_fkey,FOREIGN KEY,FOREIGN KEY (branch_id) REFERENCES branches(id)
+goods_receipts,goods_receipts_received_by_fkey,FOREIGN KEY,FOREIGN KEY (received_by) REFERENCES profiles(id) ON DELETE SET NULL
+goods_receipts,goods_receipts_supplier_id_fkey,FOREIGN KEY,FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL
+goods_receipts,goods_receipts_pkey,PRIMARY KEY,PRIMARY KEY (id)
+notifications,notifications_user_id_fkey,FOREIGN KEY,FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+notifications,notifications_pkey,PRIMARY KEY,PRIMARY KEY (id)
+org_settings,org_settings_pkey,PRIMARY KEY,PRIMARY KEY (id)
+payments,payments_branch_id_fkey,FOREIGN KEY,FOREIGN KEY (branch_id) REFERENCES branches(id)
+payments,payments_transaction_id_fkey,FOREIGN KEY,FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
+payments,payments_pkey,PRIMARY KEY,PRIMARY KEY (id)
+products,products_category_id_fkey,FOREIGN KEY,FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+products,products_pkey,PRIMARY KEY,PRIMARY KEY (id)
+profiles,profiles_id_fkey,FOREIGN KEY,FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
+profiles,profiles_pkey,PRIMARY KEY,PRIMARY KEY (id)
+stock_movements,stock_movements_branch_id_fkey,FOREIGN KEY,FOREIGN KEY (branch_id) REFERENCES branches(id)
+stock_movements,stock_movements_created_by_fkey,FOREIGN KEY,FOREIGN KEY (created_by) REFERENCES profiles(id) ON DELETE SET NULL
+stock_movements,stock_movements_product_id_fkey,FOREIGN KEY,FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+stock_movements,stock_movements_pkey,PRIMARY KEY,PRIMARY KEY (id)
+stock_opname_items,stock_opname_items_opname_id_fkey,FOREIGN KEY,FOREIGN KEY (opname_id) REFERENCES stock_opnames(id) ON DELETE CASCADE
+stock_opname_items,stock_opname_items_product_id_fkey,FOREIGN KEY,FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+stock_opname_items,stock_opname_items_pkey,PRIMARY KEY,PRIMARY KEY (id)
+stock_opnames,stock_opnames_branch_id_fkey,FOREIGN KEY,FOREIGN KEY (branch_id) REFERENCES branches(id)
+stock_opnames,stock_opnames_created_by_fkey,FOREIGN KEY,FOREIGN KEY (created_by) REFERENCES profiles(id) ON DELETE SET NULL
+stock_opnames,stock_opnames_pkey,PRIMARY KEY,PRIMARY KEY (id)
+stock_opnames,stock_opnames_code_key,UNIQUE,UNIQUE (code)
+stock_transfer_items,stock_transfer_items_product_id_fkey,FOREIGN KEY,FOREIGN KEY (product_id) REFERENCES products(id)
+stock_transfer_items,stock_transfer_items_transfer_id_fkey,FOREIGN KEY,FOREIGN KEY (transfer_id) REFERENCES stock_transfers(id) ON DELETE CASCADE
+stock_transfer_items,stock_transfer_items_pkey,PRIMARY KEY,PRIMARY KEY (id)
+stock_transfers,stock_transfers_created_by_fkey,FOREIGN KEY,FOREIGN KEY (created_by) REFERENCES profiles(id) ON DELETE SET NULL
+stock_transfers,stock_transfers_dispatched_by_fkey,FOREIGN KEY,FOREIGN KEY (dispatched_by) REFERENCES profiles(id) ON DELETE SET NULL
+stock_transfers,stock_transfers_from_branch_id_fkey,FOREIGN KEY,FOREIGN KEY (from_branch_id) REFERENCES branches(id)
+stock_transfers,stock_transfers_received_by_fkey,FOREIGN KEY,FOREIGN KEY (received_by) REFERENCES profiles(id) ON DELETE SET NULL
+stock_transfers,stock_transfers_to_branch_id_fkey,FOREIGN KEY,FOREIGN KEY (to_branch_id) REFERENCES branches(id)
+stock_transfers,stock_transfers_pkey,PRIMARY KEY,PRIMARY KEY (id)
+stock_transfers,stock_transfers_code_key,UNIQUE,UNIQUE (code)
+store_settings,store_settings_theme_primary_chk,CHECK,CHECK (((theme_primary IS NULL) OR (theme_primary ~ '^#[0-9a-fA-F]{6}$'::text)))
+store_settings,store_settings_theme_radius_chk,CHECK,"CHECK ((theme_radius = ANY (ARRAY['sharp'::text, 'md'::text, 'round'::text])))"
+store_settings,store_settings_pkey,PRIMARY KEY,PRIMARY KEY (id)
+suppliers,suppliers_pkey,PRIMARY KEY,PRIMARY KEY (id)
+transaction_items,transaction_items_product_id_fkey,FOREIGN KEY,FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
+transaction_items,transaction_items_transaction_id_fkey,FOREIGN KEY,FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
+transaction_items,transaction_items_pkey,PRIMARY KEY,PRIMARY KEY (id)
+transactions,transactions_branch_id_fkey,FOREIGN KEY,FOREIGN KEY (branch_id) REFERENCES branches(id)
+transactions,transactions_cash_session_id_fkey,FOREIGN KEY,FOREIGN KEY (cash_session_id) REFERENCES cash_sessions(id)
+transactions,transactions_cashier_id_fkey,FOREIGN KEY,FOREIGN KEY (cashier_id) REFERENCES profiles(id)
+transactions,transactions_reversal_of_fkey,FOREIGN KEY,FOREIGN KEY (reversal_of) REFERENCES transactions(id)
+transactions,transactions_voided_by_fkey,FOREIGN KEY,FOREIGN KEY (voided_by) REFERENCES profiles(id)
+transactions,transactions_pkey,PRIMARY KEY,PRIMARY KEY (id)
+wastage_items,wastage_items_product_id_fkey,FOREIGN KEY,FOREIGN KEY (product_id) REFERENCES products(id)
+wastage_items,wastage_items_wastage_id_fkey,FOREIGN KEY,FOREIGN KEY (wastage_id) REFERENCES wastages(id) ON DELETE CASCADE
+wastage_items,wastage_items_pkey,PRIMARY KEY,PRIMARY KEY (id)
+wastages,wastages_approved_by_fkey,FOREIGN KEY,FOREIGN KEY (approved_by) REFERENCES profiles(id) ON DELETE SET NULL
+wastages,wastages_branch_id_fkey,FOREIGN KEY,FOREIGN KEY (branch_id) REFERENCES branches(id)
+wastages,wastages_created_by_fkey,FOREIGN KEY,FOREIGN KEY (created_by) REFERENCES profiles(id) ON DELETE SET NULL
+wastages,wastages_pkey,PRIMARY KEY,PRIMARY KEY (id)

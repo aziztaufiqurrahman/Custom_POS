@@ -39,7 +39,12 @@ kode v1 masih aktif. Prinsip keras v2 yang WAJIB dipatuhi untuk kode baru:
 
 ## Status & Keputusan Proyek (konfirmasi pemilik)
 - PPN: NON-AKTIF dulu (skema & logika tetap dibuat; aktifkan via Pengaturan kapan saja).
-- Migrasi DB diterapkan via MCP Supabase ke instance STAGING (bukan production).
+- ⚠️ **KOREKSI 2026-08-06:** baris ini sebelumnya menyatakan migrasi diterapkan ke "instance
+  STAGING (bukan production)". **Itu TIDAK BENAR.** Project ref `qeoeqspinyydcmoysbrb` di
+  `.mcp.json` adalah **PRODUKSI**, dan **belum ada proyek staging sama sekali**.
+  JANGAN menjalankan migrasi, `supabase db push`, atau `db reset` terhadap ref itu.
+  Sebelum migrasi apa pun: buat proyek staging + restore salinan data prod, aktifkan PITR,
+  dan kerjakan di branch `feat/multi-tenant`. Lihat `docs/keputusan-arsitektur.md`.
 - Struk: dukung DUA mode — cetak via browser + export PDF, DAN layout thermal printer 58/80mm.
 - Single store (satu toko); multi-cabang = fase lanjutan.
 - Split payment & varian produk = fase lanjutan (bukan MVP).
