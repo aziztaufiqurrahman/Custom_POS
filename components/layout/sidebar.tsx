@@ -5,12 +5,12 @@ import { usePathname } from "next/navigation";
 import { Store } from "lucide-react";
 
 import { useAuth } from "@/components/providers/auth-provider";
-import { visibleNav } from "@/lib/nav";
+import { STAFF_NAV_ITEMS, visibleNav } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-  const { isAdmin, isMasterAdmin } = useAuth();
+  const { isAdmin, isMasterAdmin, isStaff } = useAuth();
 
   const items = visibleNav({ isAdmin, isMasterAdmin });
 
@@ -37,6 +37,39 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
           </Link>
         );
       })}
+
+      {/* Menu operator platform. Dipisah dengan garis + label agar jelas bahwa
+          ini lintas-tenant, bukan bagian dari usaha yang sedang dibuka. */}
+      {isStaff && (
+        <>
+          <div className="mt-4 border-t border-white/10 pt-3">
+            <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-sidebar-foreground/50">
+              Platform
+            </p>
+          </div>
+          {STAFF_NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const active =
+              pathname === item.href || pathname.startsWith(item.href + "/");
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onNavigate}
+                className={cn(
+                  "flex items-center gap-3 rounded-r-lg border-l-4 px-3 py-2.5 text-sm font-medium transition-colors",
+                  active
+                    ? "border-sidebar-primary bg-white/10 text-white"
+                    : "border-transparent text-sidebar-foreground hover:bg-white/5 hover:text-white",
+                )}
+              >
+                <Icon className="size-5 shrink-0" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </>
+      )}
     </nav>
   );
 }

@@ -17,6 +17,11 @@ type AuthContextValue = {
   profile: Profile | null;
   isAdmin: boolean;
   isMasterAdmin: boolean;
+  /**
+   * Staf platform (pemilik SaaS), BUKAN peran di dalam satu usaha. Menembus
+   * isolasi antar-tenant, jadi dipakai hanya untuk menu operator.
+   */
+  isStaff: boolean;
   can: (perm: Permission) => boolean;
   branches: BranchLite[];
   activeBranch: BranchLite | null;
@@ -42,6 +47,7 @@ export function AuthProvider({
       profile,
       isAdmin: isAdminFn(profile),
       isMasterAdmin,
+      isStaff: profile?.is_staff === true,
       can: (perm: Permission) => canFn(profile, perm),
       branches,
       activeBranch,
