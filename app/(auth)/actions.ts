@@ -5,7 +5,11 @@ import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
-import { forgotPasswordSchema, loginSchema } from "@/lib/validations/auth";
+import {
+  forgotPasswordSchema,
+  loginSchema,
+  signUpSchema,
+} from "@/lib/validations/auth";
 
 export type ActionResult = { error?: string; success?: boolean };
 
@@ -41,6 +45,45 @@ export async function signIn(raw: unknown): Promise<ActionResult> {
   }
 
   redirect("/pos");
+}
+
+/**
+ * Pendaftaran mandiri. Konfirmasi email WAJIB di kedua proyek
+ * (`mailer_autoconfirm = false`), sehingga `signUp` TIDAK mengembalikan sesi —
+ * user harus mengklik tautan di email lebih dulu. Tautan itu mengarah ke
+ * `/auth/confirm?type=signup&next=/` (lihat `supabase/email-templates/
+ * confirmation.html`), lalu `/` → `/pos` → penjaga onboarding.
+ *
+ * Peran tidak pernah dikirim dari sini. Akun lahir sebagai `kasir` tanpa
+ * workspace; haknya naik hanya untuk workspace yang ia buat sendiri.
+ */
+export async function signUp(raw: unknown): Promise<ActionResult> {
+  const parsed = signUpSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Input tidak valid" };
+  }
+  const { email, password, full_name } = parsed.data;
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name } },
+  });
+
+  if (error) {
+    // Batas kirim email terlampaui adalah satu-satunya kegagalan yang perlu
+    // dibedakan — user harus tahu untuk mencoba lagi nanti, bukan mengira
+    // datanya salah.
+    if (error.status === 429) {
+      return { error: "Terlalu banyak percobaan. Coba lagi beberapa saat lagi." };
+    }
+    return { error: "Pendaftaran gagal. Periksa data Anda lalu coba lagi." };
+  }
+
+  // Selalu balas sukses tanpa menyebut apakah email sudah terdaftar, agar tidak
+  // bisa dipakai memeriksa keberadaan akun (email enumeration).
+  return { success: true };
 }
 
 export async function requestPasswordReset(raw: unknown): Promise<ActionResult> {

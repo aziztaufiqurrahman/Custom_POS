@@ -70,6 +70,12 @@ export function LoginForm() {
           Lupa kata sandi?
         </Link>
       </div>
+      <div className="text-center text-sm text-muted-foreground">
+        Belum punya akun?{" "}
+        <Link href="/daftar" className="text-foreground hover:underline">
+          Daftar
+        </Link>
+      </div>
     </form>
   );
 }

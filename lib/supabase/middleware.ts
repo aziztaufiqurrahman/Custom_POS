@@ -25,6 +25,7 @@ export async function updateSession(request: NextRequest) {
   // "/struk" = halaman invoice publik (dibuka konsumen via tautan WhatsApp).
   const publicPrefixes = [
     "/login",
+    "/daftar",
     "/forgot-password",
     "/reset-password",
     "/auth",
@@ -65,8 +66,13 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // Sudah login tapi membuka /login atau /forgot-password → arahkan ke beranda.
-    if (user && (pathname === "/login" || pathname === "/forgot-password")) {
+    // Sudah login tapi membuka halaman masuk/daftar → arahkan ke beranda.
+    if (
+      user &&
+      (pathname === "/login" ||
+        pathname === "/daftar" ||
+        pathname === "/forgot-password")
+    ) {
       const url = request.nextUrl.clone();
       url.pathname = "/pos";
       return NextResponse.redirect(url);
