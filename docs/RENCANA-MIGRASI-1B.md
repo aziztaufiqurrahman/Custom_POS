@@ -73,13 +73,61 @@ yang kini terkurung di workspace sendiri oleh guard `0031`.
 | `workspace_id` via trigger | ✅ `transaction_items` (tanpa `branch_id`) terisi otomatis |
 | Hash-chain `stock_movements` | ✅ 11 baris, 11 hash unik, rantai utuh |
 
+### `0038` + UI onboarding — tenant baru kini bisa dibuat sendiri
+
+**Temuan penting:** skema `platform` **tidak terdaftar di PostgREST "Exposed schemas"**
+(`db_schema = 'public,graphql_public'` di PROD maupun STAGING). Artinya
+`platform.provision_workspace()` dari `0037` **sama sekali tidak bisa dipanggil dari
+aplikasi** — RPC hanya menjangkau skema yang diekspos.
+
+Diselesaikan dengan `0038`: dua pembungkus di `public` (yang sudah diekspos) —
+`my_workspace_id()` dan `provision_my_workspace()`. Sengaja **tidak** mengekspos seluruh
+skema `platform`, karena itu akan memunculkan 19 tabel ke permukaan API (termasuk
+`invoices`, `payments`, `coupons`) hanya demi dua panggilan. Semuanya memang ber-RLS
+(diverifikasi: 19/19 aktif), tetapi permukaan serang sebesar itu tidak sepadan. Tinjau ulang
+saat aplikasi billing dibangun.
+
+`provision_my_workspace()` memaksa owner = `auth.uid()`, jadi tidak bisa dipakai membuat
+tenant atas nama orang lain dari browser.
+
+**Berkas UI:** `app/onboarding/{page,onboarding-form,actions}.tsx`,
+`lib/validations/onboarding.ts`, `lib/workspace.ts`, plus penjaga di
+`app/(dashboard)/layout.tsx` — tanpa penjaga itu user tanpa tenant mendarat di dashboard
+yang tampak rusak (setiap policy menyaringnya habis).
+
+### Uji end-to-end lewat aplikasi sungguhan (STAGING)
+
+| Langkah | Hasil |
+|---|---|
+| User login tanpa workspace buka `/pos`, `/products`, `/dashboard` | ✅ 307 → `/onboarding` |
+| `/onboarding` | ✅ 200, formulir tampil |
+| Server action `createWorkspace` | ✅ mengembalikan `workspaceId` |
+| Sesudahnya buka `/pos` | ✅ 200, cabang `Echo Pusat` (`ECH`) tampil |
+| Buka `/onboarding` lagi | ✅ 307 → `/pos` (tidak ada loop) |
+| Panggil provisioning kedua kali | ✅ ditolak "Anda sudah memiliki workspace" |
+
+### ⚠️ Bahaya yang ditemukan saat pengujian: fallback env menunjuk PRODUKSI
+
+`lib/supabase/env.ts` memuat `FALLBACK_URL` ber-hardcode dengan komentar
+*"Fallback publik (staging)"* — padahal ref-nya `qeoeqspinyydcmoysbrb`, yaitu **PRODUKSI**.
+Build apa pun yang kehilangan `NEXT_PUBLIC_SUPABASE_URL` (preview Vercel, CI, mesin baru)
+akan **diam-diam menulis ke database pelanggan**. Komentarnya sudah dikoreksi keras.
+
+Terkait: `.env.local` **mengalahkan** variabel yang di-`export` di shell. Percobaan pertama
+mengarahkan `next dev` ke staging lewat `export` ternyata tetap menghantam PROD — ketahuan
+sebelum ada penulisan apa pun. Untuk menargetkan staging, pakai `.env.development.local`
+(presedensi lebih tinggi) lalu **hapus lagi** setelah selesai.
+
 ### Yang MASIH kurang sebelum bisa disebut rilis
 
-1. **UI pendaftaran/onboarding belum ada.** RPC `provision_workspace()` sudah siap dan teruji,
-   tetapi belum ada halaman yang memanggilnya. Pelanggan baru masih harus dibuatkan lewat SQL.
+1. **Belum ada halaman pendaftaran (sign-up).** Onboarding sudah jalan, tetapi akun `auth.users`
+   masih harus dibuat manual (Dashboard/admin). Untuk SaaS swalayan penuh, perlu halaman daftar
+   + verifikasi email.
 2. **Belum deploy** ke Vercel.
 3. Uji #6–#8 (kedaluwarsa → turun ke limit Gratis, pulih setelah bayar, SSO lintas subdomain)
-   belum dijalankan — ketiganya bergantung pada aplikasi platform/billing yang belum ada.
+   menunggu aplikasi platform/billing.
+4. Tenant uji tertinggal di STAGING (`Toko Alpha/Beta/Gamma`, `Warung Delta`, `Kedai Echo`) —
+   sengaja dibiarkan sebagai data uji. Jangan pernah dipakai di PROD.
 
 ---
 

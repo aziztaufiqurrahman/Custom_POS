@@ -1,5 +1,8 @@
+import { redirect } from "next/navigation";
+
 import { requireAuth } from "@/lib/auth";
 import { getBranchContext } from "@/lib/branch";
+import { needsOnboarding } from "@/lib/workspace";
 import { createClient } from "@/lib/supabase/server";
 import { themeCss } from "@/lib/themes";
 import { AuthProvider } from "@/components/providers/auth-provider";
@@ -12,6 +15,12 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { profile } = await requireAuth();
+
+  // Belum punya tenant → seluruh dashboard akan tampil kosong karena setiap
+  // policy RLS menyaring lewat platform.user_workspace_ids(). Arahkan ke
+  // onboarding alih-alih menampilkan aplikasi yang tampak rusak.
+  if (await needsOnboarding()) redirect("/onboarding");
+
   const branchCtx = await getBranchContext();
 
   // Tema kustom toko (dipilih admin). Disuntikkan sebagai override :root khusus

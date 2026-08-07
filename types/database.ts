@@ -2898,6 +2898,15 @@ export type Database = {
       is_main_branch: { Args: { b: string }; Returns: boolean }
       is_master_admin: { Args: never; Returns: boolean }
       main_branch_of: { Args: { b: string }; Returns: string }
+      my_workspace_id: { Args: never; Returns: string }
+      provision_my_workspace: {
+        Args: {
+          p_branch_code?: string
+          p_branch_name?: string
+          p_workspace_name: string
+        }
+        Returns: string
+      }
       receive_goods: {
         Args: {
           p_branch_id: string

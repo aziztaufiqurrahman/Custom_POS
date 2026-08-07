@@ -10,7 +10,16 @@
  * pernah dijadikan fallback karena bersifat rahasia (hanya dari env server).
  */
 
-// Fallback publik (staging). Env var TETAP diprioritaskan bila tersedia.
+// ⚠️ PERHATIAN: fallback ini menunjuk **PRODUKSI**, bukan staging.
+// Komentar lama menyebutnya "staging" — itu KELIRU dan berbahaya: build apa pun
+// yang kehilangan NEXT_PUBLIC_SUPABASE_URL (preview Vercel, CI, dev di mesin
+// baru) akan diam-diam menulis ke database pelanggan tanpa peringatan apa pun.
+// Staging yang sebenarnya adalah `wmwpjtujtburrybtdivh` (lihat `.env.local`).
+//
+// Env var TETAP diprioritaskan bila tersedia. Catatan penting saat pengujian:
+// `.env.local` MENGALAHKAN variabel yang di-export di shell, jadi untuk
+// mengarahkan `next dev` ke staging pakai `.env.development.local`
+// (presedensinya lebih tinggi) — bukan `export`.
 const FALLBACK_URL = "https://qeoeqspinyydcmoysbrb.supabase.co";
 const FALLBACK_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlb2Vxc3Bpbnl5ZGNtb3lzYnJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2Mzg3MDUsImV4cCI6MjA5ODIxNDcwNX0.tD1y-WaAKiqojp8Dg0B8C0nqnMjKvF8bJBsrD3i7Ylo";
