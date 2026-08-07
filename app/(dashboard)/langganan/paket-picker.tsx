@@ -14,6 +14,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 
 type Plan = {
@@ -36,7 +44,22 @@ export function PaketPicker({
   adaPending: boolean;
 }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
+
+  /**
+   * Paket mana yang sedang diproses — BUKAN boolean bersama.
+   *
+   * Sebelumnya kode ini memakai `pending` dari useTransition(), yang bernilai
+   * satu untuk seluruh komponen. Akibatnya menekan "Basic" membuat tombol Pro
+   * dan Bisnis ikut berubah menjadi "Memproses…", sehingga pengguna tidak bisa
+   * memastikan paket mana yang ia tekan. Pesanan yang tercatat selalu benar,
+   * tetapi pada aksi yang menyangkut uang keraguan seperti itu tidak boleh ada.
+   */
+  const [planDiproses, setPlanDiproses] = useState<string | null>(null);
+
+  /** Paket yang menunggu konfirmasi eksplisit sebelum pesanan dibuat. */
+  const [akanDipesan, setAkanDipesan] = useState<Plan | null>(null);
+
   const [periode, setPeriode] = useState<"monthly" | "annual">(
     periodeSekarang === "annual" ? "annual" : "monthly",
   );
@@ -47,15 +70,27 @@ export function PaketPicker({
     (p) => p.billing_period === periode || Number(p.price) === 0,
   );
 
+  const adaYangDiproses = planDiproses !== null;
+
   function pesan(plan: Plan) {
+    setAkanDipesan(null);
+    setPlanDiproses(plan.plan_id);
     startTransition(async () => {
-      const hasil = await orderPlan(plan.plan_id);
-      if (hasil.error) {
-        toast.error(hasil.error);
-        return;
+      try {
+        const hasil = await orderPlan(plan.plan_id);
+        if (hasil.error) {
+          toast.error(hasil.error);
+          return;
+        }
+        toast.success(
+          `Pesanan ${hasil.order?.code} untuk paket ${hasil.order?.tier} dibuat. Silakan transfer.`,
+        );
+        router.refresh();
+      } finally {
+        // Wajib di finally: tanpa ini, kegagalan jaringan meninggalkan tombol
+        // terkunci "Memproses…" selamanya sampai halaman dimuat ulang.
+        setPlanDiproses(null);
       }
-      toast.success(`Pesanan ${hasil.order?.code} dibuat. Silakan transfer.`);
-      router.refresh();
     });
   }
 
@@ -68,8 +103,9 @@ export function PaketPicker({
             <button
               key={p}
               type="button"
+              disabled={adaYangDiproses}
               onClick={() => setPeriode(p)}
-              className={`rounded px-3 py-1 text-sm transition ${
+              className={`rounded px-3 py-1 text-sm transition disabled:opacity-50 ${
                 periode === p
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground"
@@ -94,9 +130,19 @@ export function PaketPicker({
           const iniPaketSaya =
             plan.tier === tierSekarang &&
             (gratis || plan.billing_period === periodeSekarang);
+          const iniYangDiproses = planDiproses === plan.plan_id;
 
           return (
-            <Card key={plan.plan_id} className={iniPaketSaya ? "border-primary" : undefined}>
+            <Card
+              key={plan.plan_id}
+              className={
+                iniYangDiproses
+                  ? "border-primary ring-2 ring-primary/30"
+                  : iniPaketSaya
+                    ? "border-primary"
+                    : undefined
+              }
+            >
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base capitalize">
                   {plan.tier}
@@ -119,11 +165,10 @@ export function PaketPicker({
               </CardHeader>
               <CardContent className="space-y-3">
                 <ul className="space-y-1 text-sm text-muted-foreground">
-                  <li>
-                    {plan.limits?.max_branches ?? "Tak terbatas"} cabang
-                  </li>
+                  <li>{plan.limits?.max_branches ?? "Tak terbatas"} cabang</li>
                   <li>{plan.limits?.max_users ?? "Tak terbatas"} pengguna</li>
                 </ul>
+
                 {enterprise ? (
                   <Button variant="outline" className="w-full" disabled>
                     Hubungi kami
@@ -135,16 +180,17 @@ export function PaketPicker({
                 ) : (
                   <Button
                     className="w-full"
-                    disabled={pending || adaPending || iniPaketSaya}
-                    onClick={() => pesan(plan)}
+                    disabled={adaYangDiproses || adaPending || iniPaketSaya}
+                    onClick={() => setAkanDipesan(plan)}
                   >
-                    {iniPaketSaya
-                      ? "Sedang dipakai"
-                      : adaPending
-                        ? "Selesaikan pesanan dulu"
-                        : pending
-                          ? "Memproses…"
-                          : "Pilih Paket"}
+                    {/* Label hanya berubah pada kartu yang benar-benar ditekan. */}
+                    {iniYangDiproses
+                      ? "Memproses…"
+                      : iniPaketSaya
+                        ? "Sedang dipakai"
+                        : adaPending
+                          ? "Selesaikan pesanan dulu"
+                          : `Pilih ${plan.tier}`}
                   </Button>
                 )}
               </CardContent>
@@ -152,6 +198,49 @@ export function PaketPicker({
           );
         })}
       </div>
+
+      {/* Konfirmasi eksplisit: menyebut paket, periode, dan nilainya, supaya
+          tidak ada pesanan yang lahir dari satu klik yang salah sasaran. */}
+      <Dialog
+        open={akanDipesan !== null}
+        onOpenChange={(open) => !open && setAkanDipesan(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Paket</DialogTitle>
+            <DialogDescription>
+              {akanDipesan && (
+                <>
+                  Anda akan memesan paket{" "}
+                  <strong className="capitalize text-foreground">
+                    {akanDipesan.tier}
+                  </strong>{" "}
+                  {akanDipesan.billing_period === "annual" ? "tahunan" : "bulanan"}{" "}
+                  senilai{" "}
+                  <strong className="text-foreground">
+                    {formatRupiah(Number(akanDipesan.price))}
+                  </strong>
+                  . Setelah ini Anda akan menerima nomor pesanan dan instruksi
+                  transfer. Paket aktif setelah pembayaran kami verifikasi.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAkanDipesan(null)}>
+              Batal
+            </Button>
+            <Button
+              onClick={() => akanDipesan && pesan(akanDipesan)}
+              disabled={adaYangDiproses}
+            >
+              {akanDipesan
+                ? `Pesan ${akanDipesan.tier} — ${formatRupiah(Number(akanDipesan.price))}`
+                : "Pesan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
